@@ -193,6 +193,31 @@ class UserListPage extends BaseListPage {
     );
   }
 
+  renderUploadWithGroup() {
+    const props = {
+      name: "file",
+      accept: ".xlsx",
+      method: "post",
+      action: `${Setting.ServerUrl}/api/upload-users-group`,
+      data: {
+        organization: this.props.organizationName,
+        group: this.props.groupName ?? "",
+      },
+      withCredentials: true,
+      onChange: (info) => {
+        this.uploadFile(info);
+      },
+    };
+
+    return (
+      <Upload {...props}>
+        <Button id="upload-button" type="primary" size="small">
+          <UploadOutlined /> {`upload with group： ${this.props.groupName}`}
+        </Button>
+      </Upload>
+    );
+  }
+
   renderTable(users) {
     const columns = [
       {
@@ -421,11 +446,18 @@ class UserListPage extends BaseListPage {
         <Table scroll={{x: "max-content"}} columns={columns} dataSource={users} rowKey={(record) => `${record.owner}/${record.name}`} size="middle" bordered pagination={paginationProps}
           title={() => (
             <div>
-              {i18next.t("general:Users")}&nbsp;&nbsp;&nbsp;&nbsp;
-              <Button style={{marginRight: "5px"}} type="primary" size="small" onClick={this.addUser.bind(this)}>{i18next.t("general:Add")} </Button>
-              {
-                this.renderUpload()
-              }
+              <Space>
+                {i18next.t("general:Users")}
+                <Button style={{marginRight: "5px"}} type="primary" size="small" onClick={this.addUser.bind(this)}>{i18next.t("general:Add")} </Button>
+                {
+                  this.renderUpload()
+                }
+                {
+                  !this.props.groupName ? null : (
+                    this.renderUploadWithGroup()
+                  )
+                }
+              </Space>
             </div>
           )}
           loading={this.state.loading}

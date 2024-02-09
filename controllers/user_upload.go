@@ -70,3 +70,38 @@ func (c *ApiController) UploadUsers() {
 		c.ResponseError(c.T("user_upload:Failed to import users"))
 	}
 }
+
+func (c *ApiController) UploadUsersWithGroup() {
+	userId := c.GetSessionUsername()
+	owner, user := util.GetOwnerAndNameFromId(userId)
+
+	organization := c.Ctx.Request.FormValue("organization")
+	group := c.Ctx.Request.FormValue("group")
+
+	file, header, err := c.Ctx.Request.FormFile("file")
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	fileId := fmt.Sprintf("%s_%s_%s", owner, user, util.RemoveExt(header.Filename))
+	path := util.GetUploadXlsxPath(fileId)
+	defer os.Remove(path)
+	err = saveFile(path, &file)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	affected, err := object.UploadUsersWithGroups(owner, organization, group, path)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	if affected {
+		c.ResponseOk()
+	} else {
+		c.ResponseError(c.T("user_upload:Failed to import users"))
+	}
+}

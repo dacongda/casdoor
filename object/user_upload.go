@@ -15,6 +15,7 @@
 package object
 
 import (
+	"fmt"
 	"sort"
 	"strings"
 
@@ -135,6 +136,131 @@ func UploadUsers(owner string, path string) (bool, error) {
 			Ldap:              "",
 			Properties:        map[string]string{},
 			DeletedTime:       parseLineItem(&line, 39),
+		}
+
+		if _, ok := oldUserMap[user.GetId()]; !ok {
+			newUsers = append(newUsers, user)
+		}
+	}
+
+	if len(newUsers) == 0 {
+		return false, nil
+	}
+
+	return AddUsersInBatch(newUsers)
+}
+
+func UploadUsersWithGroups(owner string, organizationName string, groupName string, path string) (bool, error) {
+	table := xlsx.ReadXlsxFile(path)
+
+	oldUserMap, err := getUserMap(owner)
+	if err != nil {
+		return false, err
+	}
+
+	organization, err := GetOrganizationByUser(&User{Owner: organizationName})
+	if err != nil {
+		return false, err
+	}
+	if organization == nil {
+		return false, fmt.Errorf("the organization: \"%s\" is not found", organizationName)
+	}
+
+	if groupName != "" {
+		group, err := getGroup(organizationName, groupName)
+		if err != nil {
+			return false, err
+		}
+		if group == nil {
+			return false, fmt.Errorf("the group: \"%s\" is not found", groupName)
+		}
+	}
+
+	newUsers := []*User{}
+	for index, line := range table {
+		line := line
+		if index == 0 {
+			continue
+		}
+
+		user := &User{
+			Owner:             parseLineItem(&line, 0),
+			Name:              parseLineItem(&line, 1),
+			CreatedTime:       parseLineItem(&line, 2),
+			UpdatedTime:       parseLineItem(&line, 3),
+			Id:                parseLineItem(&line, 4),
+			Type:              parseLineItem(&line, 5),
+			Password:          parseLineItem(&line, 6),
+			PasswordSalt:      parseLineItem(&line, 7),
+			DisplayName:       parseLineItem(&line, 8),
+			FirstName:         parseLineItem(&line, 9),
+			LastName:          parseLineItem(&line, 10),
+			Avatar:            parseLineItem(&line, 11),
+			PermanentAvatar:   "",
+			Email:             parseLineItem(&line, 12),
+			Phone:             parseLineItem(&line, 13),
+			Location:          parseLineItem(&line, 14),
+			Address:           []string{parseLineItem(&line, 15)},
+			Affiliation:       parseLineItem(&line, 16),
+			Title:             parseLineItem(&line, 17),
+			IdCardType:        parseLineItem(&line, 18),
+			IdCard:            parseLineItem(&line, 19),
+			Homepage:          parseLineItem(&line, 20),
+			Bio:               parseLineItem(&line, 21),
+			Tag:               parseLineItem(&line, 22),
+			Region:            parseLineItem(&line, 23),
+			Language:          parseLineItem(&line, 24),
+			Gender:            parseLineItem(&line, 25),
+			Birthday:          parseLineItem(&line, 26),
+			Education:         parseLineItem(&line, 27),
+			Score:             parseLineItemInt(&line, 28),
+			Karma:             parseLineItemInt(&line, 29),
+			Ranking:           parseLineItemInt(&line, 30),
+			IsDefaultAvatar:   false,
+			IsOnline:          parseLineItemBool(&line, 31),
+			IsAdmin:           parseLineItemBool(&line, 32),
+			IsForbidden:       parseLineItemBool(&line, 33),
+			IsDeleted:         parseLineItemBool(&line, 34),
+			SignupApplication: parseLineItem(&line, 35),
+			Hash:              "",
+			PreHash:           "",
+			CreatedIp:         parseLineItem(&line, 36),
+			LastSigninTime:    parseLineItem(&line, 37),
+			LastSigninIp:      parseLineItem(&line, 38),
+			Ldap:              "",
+			Properties:        map[string]string{},
+			DeletedTime:       parseLineItem(&line, 39),
+		}
+
+		if organizationName != "" && user.Owner == "" {
+			user.Owner = organizationName
+			user.Avatar = organization.DefaultAvatar
+		}
+
+		// add group
+		if groupName != "" {
+			user.Groups = append(user.Groups, organizationName+"/"+groupName)
+		}
+
+		if user.Id == "" {
+			id, err := GenerateIdForNewUser(nil)
+			if err != nil {
+				return false, err
+			}
+
+			user.Id = id
+		}
+
+		if user.CreatedTime == "" {
+			user.CreatedTime = util.GetCurrentTime()
+		}
+
+		if organization.DefaultPassword != "" && user.Password == "" {
+			user.Password = organization.DefaultPassword
+		}
+
+		if user.PasswordType == "" || user.PasswordType == "plain" {
+			user.UpdateUserPassword(organization)
 		}
 
 		if _, ok := oldUserMap[user.GetId()]; !ok {

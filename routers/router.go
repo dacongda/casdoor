@@ -234,6 +234,7 @@ func initAPI() {
 	beego.Router("/api/add-syncer", &controllers.ApiController{}, "POST:AddSyncer")
 	beego.Router("/api/delete-syncer", &controllers.ApiController{}, "POST:DeleteSyncer")
 	beego.Router("/api/run-syncer", &controllers.ApiController{}, "GET:RunSyncer")
+	beego.Router("/api/test-syncer-db", &controllers.ApiController{}, "POST:TestSyncerDb")
 
 	beego.Router("/api/get-webhooks", &controllers.ApiController{}, "GET:GetWebhooks")
 	beego.Router("/api/get-webhook", &controllers.ApiController{}, "GET:GetWebhook")
@@ -261,6 +262,10 @@ func initAPI() {
 	beego.Router("/api/login/oauth/access_token", &controllers.ApiController{}, "POST:GetOAuthToken")
 	beego.Router("/api/login/oauth/refresh_token", &controllers.ApiController{}, "POST:RefreshToken")
 	beego.Router("/api/login/oauth/introspect", &controllers.ApiController{}, "POST:IntrospectToken")
+
+	beego.Router("/api/get-records", &controllers.ApiController{}, "GET:GetRecords")
+	beego.Router("/api/get-records-filter", &controllers.ApiController{}, "POST:GetRecordsByFilter")
+	beego.Router("/api/add-record", &controllers.ApiController{}, "POST:AddRecord")
 
 	beego.Router("/api/send-email", &controllers.ApiController{}, "POST:SendEmail")
 	beego.Router("/api/send-sms", &controllers.ApiController{}, "POST:SendSms")

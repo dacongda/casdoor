@@ -23,6 +23,8 @@ import (
 	"runtime"
 	"strings"
 
+	"github.com/casvisor/casvisor-go-sdk/casvisorsdk"
+
 	"github.com/beego/beego"
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/util"
@@ -30,8 +32,9 @@ import (
 	_ "github.com/denisenkom/go-mssqldb" // db = mssql
 	_ "github.com/go-sql-driver/mysql"   // db = mysql
 	_ "github.com/lib/pq"                // db = postgres
-	"github.com/xorm-io/core"
 	"github.com/xorm-io/xorm"
+	"github.com/xorm-io/xorm/core"
+	"github.com/xorm-io/xorm/names"
 	_ "modernc.org/sqlite" // db = sqlite
 )
 
@@ -96,7 +99,7 @@ func InitAdapter() {
 	}
 
 	tableNamePrefix := conf.GetConfigString("tableNamePrefix")
-	tbMapper := core.NewPrefixMapper(core.SnakeMapper{}, tableNamePrefix)
+	tbMapper := names.NewPrefixMapper(names.SnakeMapper{}, tableNamePrefix)
 	ormer.Engine.SetTableMapper(tbMapper)
 }
 
@@ -116,6 +119,7 @@ type Ormer struct {
 	driverName     string
 	dataSourceName string
 	dbName         string
+	Db             *sql.DB
 	Engine         *xorm.Engine
 }
 
@@ -124,6 +128,13 @@ func finalizer(a *Ormer) {
 	err := a.Engine.Close()
 	if err != nil {
 		panic(err)
+	}
+
+	if a.Db != nil {
+		err = a.Db.Close()
+		if err != nil {
+			panic(err)
+		}
 	}
 }
 
@@ -136,6 +147,26 @@ func NewAdapter(driverName string, dataSourceName string, dbName string) (*Ormer
 
 	// Open the DB, create it if not existed.
 	err := a.open()
+	if err != nil {
+		return nil, err
+	}
+
+	// Call the destructor when the object is released.
+	runtime.SetFinalizer(a, finalizer)
+
+	return a, nil
+}
+
+// NewAdapterFromdb is the constructor for Ormer.
+func NewAdapterFromDb(driverName string, dataSourceName string, dbName string, db *sql.DB) (*Ormer, error) {
+	a := &Ormer{}
+	a.driverName = driverName
+	a.dataSourceName = dataSourceName
+	a.dbName = dbName
+	a.Db = db
+
+	// Open the DB, create it if not existed.
+	err := a.openFromDb(a.Db)
 	if err != nil {
 		return nil, err
 	}
@@ -209,6 +240,30 @@ func (a *Ormer) open() error {
 	}
 
 	engine, err := xorm.NewEngine(a.driverName, dataSourceName)
+	if err != nil {
+		return err
+	}
+
+	if a.driverName == "postgres" {
+		schema := util.GetValueFromDataSourceName("search_path", dataSourceName)
+		if schema != "" {
+			engine.SetSchema(schema)
+		}
+	}
+
+	a.Engine = engine
+	return nil
+}
+
+func (a *Ormer) openFromDb(db *sql.DB) error {
+	dataSourceName := a.dataSourceName + a.dbName
+	if a.driverName != "mysql" {
+		dataSourceName = a.dataSourceName
+	}
+
+	xormDb := core.FromDB(db)
+
+	engine, err := xorm.NewEngineWithDB(a.driverName, dataSourceName, xormDb)
 	if err != nil {
 		return err
 	}
@@ -334,6 +389,11 @@ func (a *Ormer) createTable() {
 	}
 
 	err = a.Engine.Sync2(new(Syncer))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(casvisorsdk.Record))
 	if err != nil {
 		panic(err)
 	}

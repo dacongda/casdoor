@@ -86,6 +86,8 @@ type User struct {
 	Score             int      `json:"score"`
 	Karma             int      `json:"karma"`
 	Ranking           int      `json:"ranking"`
+	Balance           float64  `json:"balance"`
+	Currency          string   `xorm:"varchar(100)" json:"currency"`
 	IsDefaultAvatar   bool     `json:"isDefaultAvatar"`
 	IsOnline          bool     `json:"isOnline"`
 	IsAdmin           bool     `json:"isAdmin"`
@@ -675,7 +677,7 @@ func UpdateUser(id string, user *User, columns []string, isAdmin bool) (bool, er
 		}
 	}
 	if isAdmin {
-		columns = append(columns, "name", "email", "phone", "country_code", "type")
+		columns = append(columns, "name", "id", "email", "phone", "country_code", "type")
 	}
 
 	columns = append(columns, "updated_time")

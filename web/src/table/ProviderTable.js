@@ -76,6 +76,11 @@ class ProviderTable extends React.Component {
                 this.updateField(table, index, "name", value);
                 const provider = Setting.getArrayItem(this.props.providers, "name", value);
                 this.updateField(table, index, "provider", provider);
+
+                // If the provider is email or SMS, set the rule to "all" instead of the default "None"
+                if (provider.category === "Email" || provider.category === "SMS") {
+                  this.updateField(table, index, "rule", "all");
+                }
               }} >
               {
                 Setting.getDeduplicatedArray(this.props.providers, table, "name").map((provider, index) => <Option key={index} value={provider.name}>{provider.name}</Option>)
@@ -221,6 +226,26 @@ class ProviderTable extends React.Component {
                 <Option key="None" value="None">{i18next.t("general:None")}</Option>
                 <Option key="Dynamic" value="Dynamic">{i18next.t("application:Dynamic")}</Option>
                 <Option key="Always" value="Always">{i18next.t("application:Always")}</Option>
+              </Select>
+            );
+          } else if (record.provider?.category === "SMS" || record.provider?.category === "Email") {
+            if (text === "None") {
+              text = "all";
+            }
+            return (
+              <Select virtual={false} style={{width: "100%"}}
+                value={text}
+                defaultValue="all"
+                onChange={value => {
+                  this.updateField(table, index, "rule", value);
+                }}>
+                <Option key="all" value="all">{"All"}</Option>
+                <Option key="signup" value="signup">{"Signup"}</Option>
+                <Option key="login" value="login">{"Login"}</Option>
+                <Option key="forget" value="forget">{"Forget Password"}</Option>
+                <Option key="reset" value="reset">{"Reset Password"}</Option>
+                <Option key="mfaSetup" value="mfaSetup">{"Set MFA"}</Option>
+                <Option key="mfaAuth" value="mfaAuth">{"MFA Auth"}</Option>
               </Select>
             );
           } else {

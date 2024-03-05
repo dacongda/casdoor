@@ -30,6 +30,12 @@
     "Copy prompt page URL": "复制提醒页面URL",
     "Copy signin page URL": "复制登录页面URL",
     "Copy signup page URL": "复制注册页面URL",
+    "Custom CSS": "表单CSS",
+    "Custom CSS - Edit": "编辑表单CSS",
+    "Custom CSS - Tooltip": "注册、登录、忘记密码等表单的CSS样式（如增加边框和阴影）",
+    "Custom CSS Mobile": "表单CSS（移动端）",
+    "Custom CSS Mobile - Edit": "编辑表单CSS（移动端）",
+    "Custom CSS Mobile - Tooltip": "注册、登录、忘记密码等表单的CSS样式（如增加边框和阴影）（移动端）",
     "Dynamic": "动态开启",
     "Edit Application": "编辑应用",
     "Enable Email linking": "自动关联邮箱相同的账号",
@@ -52,12 +58,6 @@
     "File uploaded successfully": "文件上传成功",
     "First, last": "名字, 姓氏",
     "Follow organization theme": "使用组织主题",
-    "Form CSS": "表单CSS",
-    "Form CSS - Edit": "编辑表单CSS",
-    "Form CSS - Tooltip": "注册、登录、忘记密码等表单的CSS样式（如增加边框和阴影）",
-    "Form CSS Mobile": "表单CSS（移动端）",
-    "Form CSS Mobile - Edit": "编辑表单CSS（移动端）",
-    "Form CSS Mobile - Tooltip": "注册、登录、忘记密码等表单的CSS样式（如增加边框和阴影）（移动端）",
     "Form position": "表单位置",
     "Form position - Tooltip": "注册、登录、忘记密码等表单的位置",
     "Grant types": "OAuth授权类型",
@@ -367,6 +367,7 @@
     "This is a read-only demo site!": "这是一个只读演示站点！",
     "Timestamp": "时间",
     "Tokens": "令牌",
+    "Transactions": "交易",
     "Type": "类型",
     "Type - Tooltip": "类型",
     "URL": "链接",
@@ -1031,6 +1032,13 @@
     "Token type": "令牌类型",
     "Token type - Tooltip": "令牌类型"
   },
+  "transaction": {
+    "Amount": "数量",
+    "Amount - Tooltip": "交易产品的数量",
+    "Edit Transaction": "编辑交易",
+    "New Transaction": "添加交易",
+    "Tag - Tooltip": "交易的标签"
+  },
   "user": {
     "3rd-party logins": "第三方登录",
     "3rd-party logins - Tooltip": "用户所绑定的社会化登录",
@@ -1142,6 +1150,8 @@
     "Is user extended - Tooltip": "是否在JSON里加入用户的扩展字段",
     "Method - Tooltip": "HTTP方法",
     "New Webhook": "添加Webhook",
+    "Single org only": "仅本组织",
+    "Single org only - Tooltip": "仅在Webhook所在组织触发",
     "Value": "值"
   }
 }

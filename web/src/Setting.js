@@ -143,6 +143,10 @@ export const OtherProviderInfo = {
       logo: `${StaticBaseUrl}/img/social_msg91.ico`,
       url: "https://control.msg91.com/app/",
     },
+    "OSON SMS": {
+      logo: "https://osonsms.com/images/osonsms-logo.svg",
+      url: "https://osonsms.com/",
+    },
     "Custom HTTP SMS": {
       logo: `${StaticBaseUrl}/img/social_default.png`,
       url: "https://casdoor.org/docs/provider/sms/overview",
@@ -703,6 +707,15 @@ export function goToLinkSoft(ths, link) {
   ths.props.history.push(link);
 }
 
+export function goToLinkSoftOrJumpSelf(ths, link) {
+  if (link.startsWith("http")) {
+    goToLink(link);
+    return;
+  }
+
+  ths.props.history.push(link);
+}
+
 export function showMessage(type, text) {
   if (type === "success") {
     message.success(text);
@@ -1005,6 +1018,7 @@ export function getProviderTypeOptions(category) {
         {id: "Azure ACS", name: "Azure ACS"},
         {id: "Custom HTTP SMS", name: "Custom HTTP SMS"},
         {id: "Mock SMS", name: "Mock SMS"},
+        {id: "OSON SMS", name: "OSON SMS"},
         {id: "Infobip SMS", name: "Infobip SMS"},
         {id: "Tencent Cloud SMS", name: "Tencent Cloud SMS"},
         {id: "Baidu Cloud SMS", name: "Baidu Cloud SMS"},

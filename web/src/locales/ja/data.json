@@ -30,6 +30,12 @@
     "Copy prompt page URL": "プロンプトページのURLをコピーしてください",
     "Copy signin page URL": "サインインページのURLをコピーしてください",
     "Copy signup page URL": "サインアップページのURLをコピーしてください",
+    "Custom CSS": "フォームCSS",
+    "Custom CSS - Edit": "フォームのCSS - 編集",
+    "Custom CSS - Tooltip": "サインアップ、サインイン、パスワード忘れのフォームのCSSスタイリング（例：境界線や影の追加）",
+    "Custom CSS Mobile": "Custom CSS Mobile",
+    "Custom CSS Mobile - Edit": "Custom CSS Mobile - Edit",
+    "Custom CSS Mobile - Tooltip": "Custom CSS Mobile - Tooltip",
     "Dynamic": "Dynamic",
     "Edit Application": "アプリケーションを編集する",
     "Enable Email linking": "イーメールリンクの有効化",
@@ -52,12 +58,6 @@
     "File uploaded successfully": "ファイルが正常にアップロードされました",
     "First, last": "First, last",
     "Follow organization theme": "組織のテーマに従ってください",
-    "Form CSS": "フォームCSS",
-    "Form CSS - Edit": "フォームのCSS - 編集",
-    "Form CSS - Tooltip": "サインアップ、サインイン、パスワード忘れのフォームのCSSスタイリング（例：境界線や影の追加）",
-    "Form CSS Mobile": "Form CSS Mobile",
-    "Form CSS Mobile - Edit": "Form CSS Mobile - Edit",
-    "Form CSS Mobile - Tooltip": "Form CSS Mobile - Tooltip",
     "Form position": "フォームのポジション",
     "Form position - Tooltip": "登録、ログイン、パスワード忘れフォームの位置",
     "Grant types": "グラント種類",
@@ -367,6 +367,7 @@
     "This is a read-only demo site!": "これは読み取り専用のデモサイトです！",
     "Timestamp": "Timestamp",
     "Tokens": "トークン",
+    "Transactions": "Transactions",
     "Type": "Type",
     "Type - Tooltip": "Type - Tooltip",
     "URL": "URL",
@@ -1031,6 +1032,13 @@
     "Token type": "トークンタイプ",
     "Token type - Tooltip": "Token type - Tooltip"
   },
+  "transaction": {
+    "Amount": "Amount",
+    "Amount - Tooltip": "The amount of traded products",
+    "Edit Transaction": "Edit Transaction",
+    "New Transaction": "New Transaction",
+    "Tag - Tooltip": "The tag of the transaction"
+  },
   "user": {
     "3rd-party logins": "サードパーティログイン",
     "3rd-party logins - Tooltip": "ユーザーによってリンクされたソーシャルログイン",
@@ -1142,6 +1150,8 @@
     "Is user extended - Tooltip": "ユーザーの拡張フィールドをJSONに含めるかどうか",
     "Method - Tooltip": "HTTPメソッド",
     "New Webhook": "新しいWebhook",
+    "Single org only": "Single org only",
+    "Single org only - Tooltip": "Triggered only in the organization that the webhook belongs to",
     "Value": "値"
   }
 }

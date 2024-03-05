@@ -30,6 +30,12 @@
     "Copy prompt page URL": "Copiar URL de la página del prompt",
     "Copy signin page URL": "Copiar la URL de la página de inicio de sesión",
     "Copy signup page URL": "Copiar URL de la página de registro",
+    "Custom CSS": "Formulario CSS",
+    "Custom CSS - Edit": "Formulario CSS - Editar",
+    "Custom CSS - Tooltip": "Estilo CSS de los formularios de registro, inicio de sesión y olvido de contraseña (por ejemplo, agregar bordes y sombras)",
+    "Custom CSS Mobile": "Custom CSS Mobile",
+    "Custom CSS Mobile - Edit": "Custom CSS Mobile - Edit",
+    "Custom CSS Mobile - Tooltip": "Custom CSS Mobile - Tooltip",
     "Dynamic": "Dynamic",
     "Edit Application": "Editar solicitud",
     "Enable Email linking": "Habilitar enlace de correo electrónico",
@@ -52,12 +58,6 @@
     "File uploaded successfully": "Archivo subido exitosamente",
     "First, last": "First, last",
     "Follow organization theme": "Seguir el tema de la organización",
-    "Form CSS": "Formulario CSS",
-    "Form CSS - Edit": "Formulario CSS - Editar",
-    "Form CSS - Tooltip": "Estilo CSS de los formularios de registro, inicio de sesión y olvido de contraseña (por ejemplo, agregar bordes y sombras)",
-    "Form CSS Mobile": "Form CSS Mobile",
-    "Form CSS Mobile - Edit": "Form CSS Mobile - Edit",
-    "Form CSS Mobile - Tooltip": "Form CSS Mobile - Tooltip",
     "Form position": "Posición de la Forma",
     "Form position - Tooltip": "Ubicación de los formularios de registro, inicio de sesión y olvido de contraseña",
     "Grant types": "Tipos de subvenciones",
@@ -367,6 +367,7 @@
     "This is a read-only demo site!": "¡Este es un sitio de demostración solo de lectura!",
     "Timestamp": "Timestamp",
     "Tokens": "Tokens",
+    "Transactions": "Transactions",
     "Type": "Type",
     "Type - Tooltip": "Type - Tooltip",
     "URL": "Dirección URL",
@@ -1031,6 +1032,13 @@
     "Token type": "Tipo de token",
     "Token type - Tooltip": "Token type - Tooltip"
   },
+  "transaction": {
+    "Amount": "Amount",
+    "Amount - Tooltip": "The amount of traded products",
+    "Edit Transaction": "Edit Transaction",
+    "New Transaction": "New Transaction",
+    "Tag - Tooltip": "The tag of the transaction"
+  },
   "user": {
     "3rd-party logins": "Inicio de sesión de terceros",
     "3rd-party logins - Tooltip": "Accesos sociales ligados por el usuario",
@@ -1142,6 +1150,8 @@
     "Is user extended - Tooltip": "¿Incluir los campos extendidos del usuario en el JSON?",
     "Method - Tooltip": "Método HTTP",
     "New Webhook": "Nuevo Webhook",
+    "Single org only": "Single org only",
+    "Single org only - Tooltip": "Triggered only in the organization that the webhook belongs to",
     "Value": "Valor"
   }
 }

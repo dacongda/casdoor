@@ -366,7 +366,7 @@ class App extends Component {
         <FloatButton.BackTop />
         <CustomGithubCorner />
         {
-          <Suspense fallback={<div>loading</div>}>
+          <Suspense fallback={<div></div>}>
             <Layout id="parent-area">
               <ManagementPage
                 account={this.state.account}

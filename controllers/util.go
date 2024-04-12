@@ -108,12 +108,12 @@ func (c *ApiController) RequireSignedInUser() (*object.User, bool) {
 		c.ResponseError(err.Error())
 		return nil, false
 	}
-
 	if user == nil {
 		c.ClearUserSession()
 		c.ResponseError(fmt.Sprintf(c.T("general:The user: %s doesn't exist"), userId))
 		return nil, false
 	}
+
 	return user, true
 }
 
@@ -127,7 +127,37 @@ func (c *ApiController) RequireAdmin() (string, bool) {
 	if user.Owner == "built-in" {
 		return "", true
 	}
+
+	if !user.IsAdmin {
+		c.ResponseError(c.T("general:this operation requires administrator to perform"))
+		return "", false
+	}
+
 	return user.Owner, true
+}
+
+func (c *ApiController) IsOrgAdmin() (bool, bool) {
+	userId, ok := c.RequireSignedIn()
+	if !ok {
+		return false, true
+	}
+
+	if strings.HasPrefix(userId, "app/") {
+		return true, true
+	}
+
+	user, err := object.GetUser(userId)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return false, false
+	}
+	if user == nil {
+		c.ClearUserSession()
+		c.ResponseError(fmt.Sprintf(c.T("general:The user: %s doesn't exist"), userId))
+		return false, false
+	}
+
+	return user.IsAdmin, true
 }
 
 // IsMaskedEnabled ...

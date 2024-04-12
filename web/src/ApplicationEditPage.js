@@ -456,6 +456,10 @@ class ApplicationEditPage extends React.Component {
           </Col>
           <Col span={1} >
             <Switch checked={this.state.application.enableSigninSession} onChange={checked => {
+              if (!checked) {
+                this.updateApplicationField("enableAutoSignin", false);
+              }
+
               this.updateApplicationField("enableSigninSession", checked);
             }} />
           </Col>
@@ -466,6 +470,11 @@ class ApplicationEditPage extends React.Component {
           </Col>
           <Col span={1} >
             <Switch checked={this.state.application.enableAutoSignin} onChange={checked => {
+              if (!this.state.application.enableSigninSession && checked) {
+                Setting.showMessage("error", i18next.t("application:Please enable \"Signin session\" first before enabling \"Auto signin\""));
+                return;
+              }
+
               this.updateApplicationField("enableAutoSignin", checked);
             }} />
           </Col>
@@ -887,6 +896,38 @@ class ApplicationEditPage extends React.Component {
             </Popover>
           </Col>
         </Row>
+        <Row style={{marginTop: "20px"}} >
+          <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+            {Setting.getLabel(i18next.t("application:Footer HTML"), i18next.t("application:Footer HTML - Tooltip"))} :
+          </Col>
+          <Col span={22} >
+            <Popover placement="right" content={
+              <div style={{width: "900px", height: "300px"}} >
+                <CodeMirror
+                  value={this.state.application.footerHtml}
+                  options={{mode: "htmlmixed", theme: "material-darker"}}
+                  onBeforeChange={(editor, data, value) => {
+                    this.updateApplicationField("footerHtml", value);
+                  }}
+                />
+              </div>
+            } title={i18next.t("application:Footer HTML - Edit")} trigger="click">
+              <Input value={this.state.application.footerHtml} style={{marginBottom: "10px"}} onChange={e => {
+                this.updateApplicationField("footerHtml", e.target.value);
+              }} />
+            </Popover>
+          </Col>
+        </Row>
+        <Row style={{marginTop: "20px"}} >
+          <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+          </Col>
+          <Button style={{marginLeft: "10px", marginBottom: "5px"}} onClick={() => this.updateApplicationField("footerHtml", Setting.getDefaultFooterContent())} >
+            {i18next.t("provider:Reset to Default HTML")}
+          </Button>
+          <Button style={{marginLeft: "10px", marginBottom: "5px"}} onClick={() => this.updateApplicationField("footerHtml", Setting.getEmptyFooterContent())} >
+            {i18next.t("application:Reset to Empty")}
+          </Button>
+        </Row>
         {
           <React.Fragment>
             <Row style={{marginTop: "20px"}} >
@@ -1049,7 +1090,7 @@ class ApplicationEditPage extends React.Component {
   submitApplicationEdit(exitAfterSave) {
     const application = Setting.deepCopy(this.state.application);
     application.providers = application.providers?.filter(provider => this.state.providers.map(provider => provider.name).includes(provider.name));
-    application.signinMethods = application.signinMethods?.filter(signinMethod => ["Password", "Verification code", "WebAuthn", "LDAP"].includes(signinMethod.name));
+    application.signinMethods = application.signinMethods?.filter(signinMethod => ["Password", "Verification code", "WebAuthn", "LDAP", "Face ID"].includes(signinMethod.name));
 
     ApplicationBackend.updateApplication("admin", this.state.applicationName, application)
       .then((res) => {

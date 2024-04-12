@@ -34,8 +34,8 @@ import OrganizationListPage from "./OrganizationListPage";
 import OrganizationEditPage from "./OrganizationEditPage";
 import UserListPage from "./UserListPage";
 import GroupTreePage from "./GroupTreePage";
-import GroupListPage from "./GroupList";
-import GroupEditPage from "./GroupEdit";
+import GroupListPage from "./GroupListPage";
+import GroupEditPage from "./GroupEditPage";
 import UserEditPage from "./UserEditPage";
 import InvitationListPage from "./InvitationListPage";
 import InvitationEditPage from "./InvitationEditPage";
@@ -80,6 +80,7 @@ import * as AuthBackend from "./auth/AuthBackend";
 import {clearWeb3AuthToken} from "./auth/Web3Auth";
 import TransactionListPage from "./TransactionListPage";
 import TransactionEditPage from "./TransactionEditPage";
+import VerificationListPage from "./VerificationListPage";
 
 function ManagementPage(props) {
 
@@ -208,8 +209,28 @@ function ManagementPage(props) {
       return [];
     }
 
-    const textColor = props.themeAlgorithm.includes("dark") ? "white" : "black";
+    let textColor = "black";
     const twoToneColor = props.themeData.colorPrimary;
+
+    let logo = props.account.organization.logo ? props.account.organization.logo : Setting.getLogo(props.themeAlgorithm);
+    if (props.themeAlgorithm.includes("dark")) {
+      if (props.account.organization.logoDark) {
+        logo = props.account.organization.logoDark;
+      }
+      textColor = "white";
+    }
+
+    !Setting.isMobile() ? res.push({
+      label:
+            <Link to="/">
+              <img className="logo" src={logo ?? props.logo} alt="logo" />
+            </Link>,
+      disabled: true,
+      style: {
+        padding: 0,
+        height: "auto",
+      },
+    }) : null;
 
     res.push(Setting.getItem(<Link style={{color: textColor}} to="/">{i18next.t("general:Home")}</Link>, "/home", <HomeTwoTone twoToneColor={twoToneColor} />, [
       Setting.getItem(<Link to="/">{i18next.t("general:Dashboard")}</Link>, "/"),
@@ -261,6 +282,7 @@ function ManagementPage(props) {
         Conf.CasvisorUrl ? Setting.getItem(<a target="_blank" rel="noreferrer" href={Conf.CasvisorUrl}>{i18next.t("general:Records")}</a>, "/records")
           : Setting.getItem(<Link to="/records">{i18next.t("general:Records")}</Link>, "/records"),
         Setting.getItem(<Link to="/tokens">{i18next.t("general:Tokens")}</Link>, "/tokens"),
+        Setting.getItem(<Link to="/verifications">{i18next.t("general:Verifications")}</Link>, "/verifications"),
       ]));
 
       if (Setting.isAdminUser(props.account)) {
@@ -319,6 +341,7 @@ function ManagementPage(props) {
         <Route exact path="/resources" render={(props) => renderLoginIfNotLoggedIn(<ResourceListPage account={account} {...props} />)} />
         <Route exact path="/certs" render={(props) => renderLoginIfNotLoggedIn(<CertListPage account={account} {...props} />)} />
         <Route exact path="/certs/:organizationName/:certName" render={(props) => renderLoginIfNotLoggedIn(<CertEditPage account={account} {...props} />)} />
+        <Route exact path="/verifications" render={(props) => renderLoginIfNotLoggedIn(<VerificationListPage account={account} {...props} />)} />
         <Route exact path="/roles" render={(props) => renderLoginIfNotLoggedIn(<RoleListPage account={account} {...props} />)} />
         <Route exact path="/roles/:organizationName/:roleName" render={(props) => renderLoginIfNotLoggedIn(<RoleEditPage account={account} {...props} />)} />
         <Route exact path="/permissions" render={(props) => renderLoginIfNotLoggedIn(<PermissionListPage account={account} {...props} />)} />
@@ -367,11 +390,6 @@ function ManagementPage(props) {
     <React.Fragment>
       <EnableMfaNotification account={props.account} />
       <Header style={{padding: "0", marginBottom: "3px", backgroundColor: props.themeAlgorithm.includes("dark") ? "black" : "white"}} >
-        {Setting.isMobile() ? null : (
-          <Link to={"/"}>
-            <div className="logo" style={{background: `url(${props.logo})`}} />
-          </Link>
-        )}
         {props.requiredEnableMfa || (Setting.isMobile() ?
           <React.Fragment>
             <Drawer title={i18next.t("general:Close")} placement="left" visible={menuVisible} onClose={onClose}>
@@ -393,7 +411,7 @@ function ManagementPage(props) {
             items={getMenuItems()}
             mode={"horizontal"}
             selectedKeys={[props.selectedMenuKey]}
-            style={{position: "absolute", left: "145px", right: menuStyleRight, backgroundColor: props.themeAlgorithm.includes("dark") ? "black" : "white"}}
+            style={{position: "absolute", left: 0, right: menuStyleRight, backgroundColor: props.themeAlgorithm.includes("dark") ? "black" : "white"}}
           />
         )}
         {

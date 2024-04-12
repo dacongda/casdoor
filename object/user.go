@@ -98,6 +98,7 @@ type User struct {
 	PreHash           string   `xorm:"varchar(100)" json:"preHash"`
 	AccessKey         string   `xorm:"varchar(100)" json:"accessKey"`
 	AccessSecret      string   `xorm:"varchar(100)" json:"accessSecret"`
+	AccessToken       string   `xorm:"mediumtext" json:"accessToken"`
 
 	CreatedIp      string `xorm:"varchar(100)" json:"createdIp"`
 	LastSigninTime string `xorm:"varchar(100)" json:"lastSigninTime"`
@@ -190,6 +191,7 @@ type User struct {
 	MultiFactorAuths    []*MfaProps           `xorm:"-" json:"multiFactorAuths,omitempty"`
 	Invitation          string                `xorm:"varchar(100) index" json:"invitation"`
 	InvitationCode      string                `xorm:"varchar(100) index" json:"invitationCode"`
+	FaceIds             []*FaceId             `json:"faceIds"`
 
 	Ldap       string            `xorm:"ldap varchar(100)" json:"ldap"`
 	Properties map[string]string `json:"properties"`
@@ -216,6 +218,8 @@ type Userinfo struct {
 	Address       string   `json:"address,omitempty"`
 	Phone         string   `json:"phone,omitempty"`
 	Groups        []string `json:"groups,omitempty"`
+	Roles         []string `json:"roles,omitempty"`
+	Permissions   []string `json:"permissions,omitempty"`
 }
 
 type ManagedAccount struct {
@@ -223,6 +227,11 @@ type ManagedAccount struct {
 	Username    string `xorm:"varchar(100)" json:"username"`
 	Password    string `xorm:"varchar(100)" json:"password"`
 	SigninUrl   string `xorm:"varchar(200)" json:"signinUrl"`
+}
+
+type FaceId struct {
+	Name       string    `xorm:"varchar(100) notnull pk" json:"name"`
+	FaceIdData []float64 `json:"faceIdData"`
 }
 
 func GetUserFieldStringValue(user *User, fieldName string) (bool, string, error) {
@@ -665,7 +674,7 @@ func UpdateUser(id string, user *User, columns []string, isAdmin bool) (bool, er
 		columns = []string{
 			"owner", "display_name", "avatar", "first_name", "last_name",
 			"location", "address", "country_code", "region", "language", "affiliation", "title", "id_card_type", "id_card", "homepage", "bio", "tag", "language", "gender", "birthday", "education", "score", "karma", "ranking", "signup_application",
-			"is_admin", "is_forbidden", "is_deleted", "hash", "is_default_avatar", "properties", "webauthnCredentials", "managedAccounts",
+			"is_admin", "is_forbidden", "is_deleted", "hash", "is_default_avatar", "properties", "webauthnCredentials", "managedAccounts", "face_ids",
 			"signin_wrong_times", "last_signin_wrong_time", "groups", "access_key", "access_secret",
 			"github", "google", "qq", "wechat", "facebook", "dingtalk", "weibo", "gitee", "linkedin", "wecom", "lark", "gitlab", "adfs",
 			"baidu", "alipay", "casdoor", "infoflow", "apple", "azuread", "azureadb2c", "slack", "steam", "bilibili", "okta", "douyin", "line", "amazon",
@@ -824,6 +833,11 @@ func AddUser(user *User) (bool, error) {
 		}
 	}
 
+	isUsernameLowered := conf.GetConfigBool("isUsernameLowered")
+	if isUsernameLowered {
+		user.Name = strings.ToLower(user.Name)
+	}
+
 	affected, err := ormer.Engine.Insert(user)
 	if err != nil {
 		return false, err
@@ -836,6 +850,8 @@ func AddUsers(users []*User) (bool, error) {
 	if len(users) == 0 {
 		return false, fmt.Errorf("no users are provided")
 	}
+
+	isUsernameLowered := conf.GetConfigBool("isUsernameLowered")
 
 	// organization := GetOrganizationByUser(users[0])
 	for _, user := range users {
@@ -859,6 +875,10 @@ func AddUsers(users []*User) (bool, error) {
 			if err != nil {
 				return false, err
 			}
+		}
+
+		if isUsernameLowered {
+			user.Name = strings.ToLower(user.Name)
 		}
 	}
 
@@ -914,7 +934,7 @@ func DeleteUser(user *User) (bool, error) {
 	return affected != 0, nil
 }
 
-func GetUserInfo(user *User, scope string, aud string, host string) *Userinfo {
+func GetUserInfo(user *User, scope string, aud string, host string) (*Userinfo, error) {
 	_, originBackend := getOriginFromHost(host)
 
 	resp := Userinfo{
@@ -922,24 +942,44 @@ func GetUserInfo(user *User, scope string, aud string, host string) *Userinfo {
 		Iss: originBackend,
 		Aud: aud,
 	}
+
 	if strings.Contains(scope, "profile") {
 		resp.Name = user.Name
 		resp.DisplayName = user.DisplayName
 		resp.Avatar = user.Avatar
 		resp.Groups = user.Groups
+
+		err := ExtendUserWithRolesAndPermissions(user)
+		if err != nil {
+			return nil, err
+		}
+
+		resp.Roles = []string{}
+		for _, role := range user.Roles {
+			resp.Roles = append(resp.Roles, role.Name)
+		}
+
+		resp.Permissions = []string{}
+		for _, permission := range user.Permissions {
+			resp.Permissions = append(resp.Permissions, permission.Name)
+		}
 	}
+
 	if strings.Contains(scope, "email") {
 		resp.Email = user.Email
 		// resp.EmailVerified = user.EmailVerified
 		resp.EmailVerified = true
 	}
+
 	if strings.Contains(scope, "address") {
 		resp.Address = user.Location
 	}
+
 	if strings.Contains(scope, "phone") {
 		resp.Phone = user.Phone
 	}
-	return &resp
+
+	return &resp, nil
 }
 
 func LinkUserAccount(user *User, field string, value string) (bool, error) {

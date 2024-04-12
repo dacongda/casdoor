@@ -98,6 +98,7 @@ p, *, *, GET, /api/get-all-objects, *, *
 p, *, *, GET, /api/get-all-actions, *, *
 p, *, *, GET, /api/get-all-roles, *, *
 p, *, *, GET, /api/get-invitation-info, *, *
+p, *, *, GET, /api/faceid-signin-begin, *, *
 `
 
 		sa := stringadapter.NewAdapter(ruleText)
@@ -158,6 +159,11 @@ func isAllowedInDemoMode(subOwner string, subName string, method string, urlPath
 		} else if urlPath == "/api/update-user" {
 			// Allow ordinary users to update their own information
 			if (subOwner == objOwner && subName == objName || subOwner == "app") && !(subOwner == "built-in" && subName == "admin") {
+				return true
+			}
+			return false
+		} else if urlPath == "/api/upload-resource" {
+			if subOwner == "app" && subName == "app-casibase" {
 				return true
 			}
 			return false

@@ -34,12 +34,14 @@ const ManagementPage = lazy(() => import("./ManagementPage"));
 const {Footer, Content} = Layout;
 
 import {setTwoToneColor} from "@ant-design/icons";
+import * as ApplicationBackend from "./backend/ApplicationBackend";
 
 setTwoToneColor("rgb(87,52,211)");
 
 class App extends Component {
   constructor(props) {
     super(props);
+    this.setThemeAlgorithm();
     let storageThemeAlgorithm = [];
     try {
       storageThemeAlgorithm = localStorage.getItem("themeAlgorithm") ? JSON.parse(localStorage.getItem("themeAlgorithm")) : ["default"];
@@ -50,12 +52,14 @@ class App extends Component {
       classes: props,
       selectedMenuKey: 0,
       account: undefined,
+      accessToken: undefined,
       uri: null,
       themeAlgorithm: storageThemeAlgorithm,
       themeData: Conf.ThemeDefault,
       logo: this.getLogo(storageThemeAlgorithm),
       requiredEnableMfa: false,
       isAiAssistantOpen: false,
+      application: undefined,
     };
     Setting.initServerUrl();
     Auth.initAuthWithConfig({
@@ -67,6 +71,7 @@ class App extends Component {
   UNSAFE_componentWillMount() {
     this.updateMenuKey();
     this.getAccount();
+    this.getApplication();
   }
 
   componentDidUpdate(prevProps, prevState, snapshot) {
@@ -150,10 +155,15 @@ class App extends Component {
   }
 
   getLogo(themes) {
-    if (themes.includes("dark")) {
-      return `${Setting.StaticBaseUrl}/img/casdoor-logo_1185x256_dark.png`;
-    } else {
-      return `${Setting.StaticBaseUrl}/img/casdoor-logo_1185x256.png`;
+    return Setting.getLogo(themes);
+  }
+
+  setThemeAlgorithm() {
+    const currentUrl = window.location.href;
+    const url = new URL(currentUrl);
+    const themeType = url.searchParams.get("theme");
+    if (themeType === "dark" || themeType === "default") {
+      localStorage.setItem("themeAlgorithm", JSON.stringify([themeType]));
     }
   }
 
@@ -190,6 +200,24 @@ class App extends Component {
     }
   };
 
+  getApplication() {
+    const applicationName = localStorage.getItem("applicationName");
+    if (!applicationName) {
+      return;
+    }
+    ApplicationBackend.getApplication("admin", applicationName)
+      .then((res) => {
+        if (res.status === "error") {
+          Setting.showMessage("error", res.msg);
+          return;
+        }
+
+        this.setState({
+          application: res.data,
+        });
+      });
+  }
+
   getAccount() {
     const params = new URLSearchParams(this.props.location.search);
 
@@ -211,9 +239,11 @@ class App extends Component {
     AuthBackend.getAccount(query)
       .then((res) => {
         let account = null;
+        let accessToken = null;
         if (res.status === "ok") {
           account = res.data;
           account.organization = res.data2;
+          accessToken = res.data.accessToken;
 
           this.setLanguage(account);
           this.setTheme(Setting.getThemeData(account.organization), Conf.InitThemeAlgorithm);
@@ -225,6 +255,7 @@ class App extends Component {
 
         this.setState({
           account: account,
+          accessToken: accessToken,
         });
       });
   }
@@ -239,17 +270,24 @@ class App extends Component {
     return (
       <React.Fragment>
         {!this.state.account ? null : <div style={{display: "none"}} id="CasdoorApplicationName" value={this.state.account.signupApplication} />}
+        {!this.state.account ? null : <div style={{display: "none"}} id="CasdoorAccessToken" value={this.state.accessToken} />}
         <Footer id="footer" style={
           {
             textAlign: "center",
           }
         }>
           {
-            Conf.CustomFooter !== null ? Conf.CustomFooter : (
+            this.state.application?.footerHtml && this.state.application.footerHtml !== "" ?
               <React.Fragment>
-                Powered by <a target="_blank" href="https://casdoor.org" rel="noreferrer"><img style={{paddingBottom: "3px"}} height={"20px"} alt={"Casdoor"} src={this.state.logo} /></a>
+                <div dangerouslySetInnerHTML={{__html: this.state.application.footerHtml}} />
               </React.Fragment>
-            )
+              : (
+                Conf.CustomFooter !== null ? Conf.CustomFooter : (
+                  <React.Fragment>
+                  Powered by <a target="_blank" href="https://casdoor.org" rel="noreferrer"><img style={{paddingBottom: "3px"}} height={"20px"} alt={"Casdoor"} src={this.state.logo} /></a>
+                  </React.Fragment>
+                )
+              )
           }
         </Footer>
       </React.Fragment>
@@ -330,7 +368,13 @@ class App extends Component {
                     <EntryPage
                       account={this.state.account}
                       theme={this.state.themeData}
+                      updateApplication={(application) => {
+                        this.setState({
+                          application: application,
+                        });
+                      }}
                       onLoginSuccess={(redirectUrl) => {
+                        window.google?.accounts?.id?.cancel();
                         if (redirectUrl) {
                           localStorage.setItem("mfaRedirectUrl", redirectUrl);
                         }
@@ -366,7 +410,7 @@ class App extends Component {
         <FloatButton.BackTop />
         <CustomGithubCorner />
         {
-          <Suspense fallback={<div></div>}>
+          <Suspense fallback={null}>
             <Layout id="parent-area">
               <ManagementPage
                 account={this.state.account}

@@ -105,6 +105,7 @@ type Application struct {
 	SignupHtml           string     `xorm:"mediumtext" json:"signupHtml"`
 	SigninHtml           string     `xorm:"mediumtext" json:"signinHtml"`
 	ThemeData            *ThemeData `xorm:"json" json:"themeData"`
+	FooterHtml           string     `xorm:"mediumtext" json:"footerHtml"`
 	FormCss              string     `xorm:"text" json:"formCss"`
 	FormCssMobile        string     `xorm:"text" json:"formCssMobile"`
 	FormOffset           int        `json:"formOffset"`
@@ -310,6 +311,9 @@ func extendApplicationWithSigninMethods(application *Application) (err error) {
 			signinMethod := &SigninMethod{Name: "WebAuthn", DisplayName: "WebAuthn", Rule: "None"}
 			application.SigninMethods = append(application.SigninMethods, signinMethod)
 		}
+
+		signinMethod := &SigninMethod{Name: "Face ID", DisplayName: "Face ID", Rule: "None"}
+		application.SigninMethods = append(application.SigninMethods, signinMethod)
 	}
 
 	if len(application.SigninMethods) == 0 {
@@ -504,7 +508,7 @@ func GetMaskedApplication(application *Application, userId string) *Application 
 
 	providerItems := []*ProviderItem{}
 	for _, providerItem := range application.Providers {
-		if providerItem.Provider != nil && (providerItem.Provider.Category == "OAuth" || providerItem.Provider.Category == "Web3") {
+		if providerItem.Provider != nil && (providerItem.Provider.Category == "OAuth" || providerItem.Provider.Category == "Web3" || providerItem.Provider.Category == "Captcha") {
 			providerItems = append(providerItems, providerItem)
 		}
 	}
@@ -528,11 +532,12 @@ func GetMaskedApplication(application *Application, userId string) *Application 
 		application.OrganizationObj.PasswordSalt = "***"
 		application.OrganizationObj.InitScore = -1
 		application.OrganizationObj.EnableSoftDeletion = false
-		application.OrganizationObj.IsProfilePublic = false
 
 		if !isOrgUser {
 			application.OrganizationObj.MfaItems = nil
-			application.OrganizationObj.AccountItems = nil
+			if !application.OrganizationObj.IsProfilePublic {
+				application.OrganizationObj.AccountItems = nil
+			}
 		}
 	}
 
@@ -748,6 +753,17 @@ func (application *Application) IsLdapEnabled() bool {
 	if len(application.SigninMethods) > 0 {
 		for _, signinMethod := range application.SigninMethods {
 			if signinMethod.Name == "LDAP" {
+				return true
+			}
+		}
+	}
+	return false
+}
+
+func (application *Application) IsFaceIdEnabled() bool {
+	if len(application.SigninMethods) > 0 {
+		for _, signinMethod := range application.SigninMethods {
+			if signinMethod.Name == "Face ID" {
 				return true
 			}
 		}

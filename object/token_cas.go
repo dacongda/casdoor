@@ -256,12 +256,12 @@ func GetValidationBySaml(samlRequest string, host string) (string, string, error
 
 	ticket := request.AssertionArtifact.InnerXML
 	if ticket == "" {
-		return "", "", fmt.Errorf("samlp:AssertionArtifact field not found")
+		return "", "", fmt.Errorf("request.AssertionArtifact.InnerXML error, AssertionArtifact field not found")
 	}
 
 	ok, _, service, userId := GetCasTokenByTicket(ticket)
 	if !ok {
-		return "", "", fmt.Errorf("ticket %s found", ticket)
+		return "", "", fmt.Errorf("the CAS token for ticket %s is not found", ticket)
 	}
 
 	user, err := GetUser(userId)
@@ -270,7 +270,7 @@ func GetValidationBySaml(samlRequest string, host string) (string, string, error
 	}
 
 	if user == nil {
-		return "", "", fmt.Errorf("user %s found", userId)
+		return "", "", fmt.Errorf("the user %s is not found", userId)
 	}
 
 	application, err := GetApplicationByUser(user)
@@ -279,10 +279,13 @@ func GetValidationBySaml(samlRequest string, host string) (string, string, error
 	}
 
 	if application == nil {
-		return "", "", fmt.Errorf("application for user %s found", userId)
+		return "", "", fmt.Errorf("the application for user %s is not found", userId)
 	}
 
-	samlResponse := NewSamlResponse11(user, request.RequestID, host)
+	samlResponse, err := NewSamlResponse11(user, request.RequestID, host)
+	if err != nil {
+		return "", "", err
+	}
 
 	cert, err := getCertByApplication(application)
 	if err != nil {

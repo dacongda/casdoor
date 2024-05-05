@@ -19,7 +19,7 @@ import * as VerificationBackend from "./backend/VerificationBackend";
 import i18next from "i18next";
 import {Link} from "react-router-dom";
 import React from "react";
-import {Table} from "antd";
+import {Switch, Table} from "antd";
 
 class VerificationListPage extends BaseListPage {
   newVerification() {
@@ -111,6 +111,26 @@ class VerificationListPage extends BaseListPage {
         },
       },
       {
+        title: i18next.t("general:Client IP"),
+        dataIndex: "remoteAddr",
+        key: "remoteAddr",
+        width: "100px",
+        sorter: true,
+        ...this.getColumnSearchProps("remoteAddr"),
+        render: (text, record, index) => {
+          let clientIp = text;
+          if (clientIp.endsWith(": ")) {
+            clientIp = clientIp.slice(0, -2);
+          }
+
+          return (
+            <a target="_blank" rel="noreferrer" href={`https://db-ip.com/${clientIp}`}>
+              {clientIp}
+            </a>
+          );
+        },
+      },
+      {
         title: i18next.t("verification:Receiver"),
         dataIndex: "receiver",
         key: "receiver",
@@ -125,6 +145,18 @@ class VerificationListPage extends BaseListPage {
         width: "150px",
         sorter: true,
         ...this.getColumnSearchProps("code"),
+      },
+      {
+        title: i18next.t("verification:Is used"),
+        dataIndex: "isUsed",
+        key: "isUsed",
+        width: "90px",
+        sorter: true,
+        render: (text, record, index) => {
+          return (
+            <Switch disabled checkedChildren="ON" unCheckedChildren="OFF" checked={text} />
+          );
+        },
       },
     ];
 

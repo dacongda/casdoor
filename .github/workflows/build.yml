@@ -128,7 +128,7 @@ jobs:
   release-and-push:
     name: Release And Push
     runs-on: ubuntu-latest
-    if: github.repository == 'casdoor/casdoor' && github.event_name == 'push'
+    #if: github.repository == 'casdoor/casdoor' && github.event_name == 'push'
     needs: [ frontend, backend, linter, e2e ]
     steps:
       - name: Checkout
@@ -147,7 +147,7 @@ jobs:
       - name: Release
         run: yarn global add semantic-release@17.4.4 && semantic-release
         env:
-          GH_TOKEN: ${{ secrets.GH_BOT_TOKEN }}
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: Fetch Current version
         id: get-current-tag

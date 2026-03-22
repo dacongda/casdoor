@@ -230,8 +230,8 @@ func (c *ApiController) ProxyServer() {
 		request.URL.RawPath = ""
 		request.URL.RawQuery = targetUrl.RawQuery
 
-		for k, v := range server.HttpHeaders {
-			request.Header.Set(k, v)
+		if server.Token != "" {
+			request.Header.Set("Authorization", "Bearer "+server.Token)
 		}
 	}
 

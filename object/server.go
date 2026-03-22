@@ -19,9 +19,9 @@ import (
 	"fmt"
 
 	"github.com/casdoor/casdoor/util"
-	"github.com/xorm-io/core"
-
 	"github.com/modelcontextprotocol/go-sdk/mcp"
+	"github.com/xorm-io/core"
+	"golang.org/x/oauth2"
 )
 
 type Tool struct {
@@ -36,10 +36,10 @@ type Server struct {
 	UpdatedTime string `xorm:"varchar(100)" json:"updatedTime"`
 	DisplayName string `xorm:"varchar(100)" json:"displayName"`
 
-	Url         string            `xorm:"varchar(500)" json:"url"`
-	HttpHeaders map[string]string `xorm:"varchar(500)" json:"httpHeaders"`
-	Application string            `xorm:"varchar(100)" json:"application"`
-	Tools       []*Tool           `xorm:"mediumtext" json:"tools"`
+	Url         string  `xorm:"varchar(500)" json:"url"`
+	Token       string  `xorm:"varchar(500)" json:"token"`
+	Application string  `xorm:"varchar(100)" json:"application"`
+	Tools       []*Tool `xorm:"mediumtext" json:"tools"`
 }
 
 func GetServers(owner string) ([]*Server, error) {
@@ -127,9 +127,18 @@ func GetPaginationServers(owner string, offset, limit int, field, value, sortFie
 }
 
 func GetServerTools(server *Server) ([]*mcp.Tool, error) {
+	var session *mcp.ClientSession
+	var err error
+
 	ctx := context.Background()
 	client := mcp.NewClient(&mcp.Implementation{Name: util.GetId(server.Owner, server.Name), Version: "1.0.0"}, nil)
-	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: server.Url}, nil)
+	if server.Token != "" {
+		httpClient := oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: server.Token}))
+		session, err = client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: server.Url, HTTPClient: httpClient}, nil)
+	} else {
+		session, err = client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: server.Url}, nil)
+	}
+
 	if err != nil {
 		return nil, err
 	}

@@ -57,7 +57,9 @@ class ServerEditPage extends React.Component {
             server: res.data,
           });
 
-          this.getServerTools(res.data);
+          if (res.data.url !== "") {
+            this.getServerTools(res.data);
+          }
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to get")}: ${res.msg}`);
         }
@@ -142,12 +144,12 @@ class ServerEditPage extends React.Component {
       .then((res) => {
         if (res.status === "ok") {
           const tools = res.data || [];
-          res.data.map((tool, idx) => {
+          res.data?.map((tool, idx) => {
             const oldTool = this.state.server.tools?.find(t => t.name === tool.name);
             if (oldTool) {
-              tools[idx].isForbidden = oldTool.isForbidden;
+              tools[idx].isAllowed = oldTool.isAllowed;
             } else {
-              tools[idx].isForbidden = false;
+              tools[idx].isAllowed = true;
             }
           });
           this.updateServerField("tools", tools);
@@ -239,6 +241,7 @@ class ServerEditPage extends React.Component {
             {Setting.getLabel(i18next.t("general:Tool"), i18next.t("general:Tool - Tooltip"))} :
           </Col>
           <Col span={22} >
+            <Button style={{marginBottom: "12px"}} type="primary" onClick={() => this.getServerTools(this.state.server)}>{i18next.t("server:Sync tools")}</Button>
             <ToolTable
               tools={this.state.server?.tools || []}
               onUpdateTable={(value) => {this.updateServerField("tools", value);}}

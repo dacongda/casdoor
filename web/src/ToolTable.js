@@ -25,7 +25,7 @@ class ToolTable extends React.Component {
     const newTable = [...(table || [])];
     newTable[index] = {
       ...newTable[index],
-      isForbidden: value,
+      isAllowed: value,
     };
     this.updateTable(newTable);
   }
@@ -44,13 +44,13 @@ class ToolTable extends React.Component {
         key: "description",
       },
       {
-        title: i18next.t("general:Is forbidden"),
-        dataIndex: "isForbidden",
-        key: "isForbidden",
+        title: i18next.t("general:Is allowed"),
+        dataIndex: "isAllowed",
+        key: "isAllowed",
         width: "120px",
         render: (text, record, index) => {
           return (
-            <Switch checked={record.isForbidden} onChange={(checked) => {
+            <Switch checked={record.isAllowed} onChange={(checked) => {
               this.updateToolEnable(table, index, checked);
             }} />
           );

@@ -16,6 +16,7 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -158,8 +159,8 @@ func (c *ApiController) DeleteServer() {
 // @Description proxy request to the upstream MCP server by Server URL
 // @Param   owner    path    string  true        "The owner name of the server"
 // @Param   name     path    string  true        "The name of the server"
-// @Success 200 {object} controllers.Response The Response object
-// @router /server/:owner/:name [get,post]
+// @Success 200 {object} mcp.McpResponse The Response object
+// @router /server/:owner/:name [post]
 func (c *ApiController) ProxyServer() {
 	owner := c.Ctx.Input.Param(":owner")
 	name := c.Ctx.Input.Param(":name")
@@ -208,7 +209,7 @@ func (c *ApiController) ProxyServer() {
 		}
 
 		for _, tool := range server.Tools {
-			if tool.Name == params.Name && tool.IsForbidden {
+			if tool.Name == params.Name && !tool.IsAllowed {
 				c.McpResponseError(mcpReq.ID, -32600, "tool is forbidden", nil)
 				return
 			} else if tool.Name == params.Name {
@@ -238,12 +239,24 @@ func (c *ApiController) ProxyServer() {
 	proxy.ServeHTTP(c.Ctx.ResponseWriter, c.Ctx.Request)
 }
 
+// GetServerTools
+// @Title GetServerTools
+// @Tag Server API
+// @Description get mcp server tool list
+// @Param   id    query    string  true        "The owner name of the server"
+// @Success 200 {object} controllers.Response The Response object
+// @router /server/:owner/:name [post]
 func (c *ApiController) GetServerTools() {
 	id := c.Ctx.Input.Query("id")
 
 	server, err := object.GetServer(id)
 	if err != nil {
 		c.ResponseError(err.Error())
+		return
+	}
+
+	if server == nil {
+		c.ResponseError(fmt.Sprintf(c.T("server:Server %s not found"), id))
 		return
 	}
 

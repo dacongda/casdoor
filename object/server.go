@@ -26,7 +26,7 @@ import (
 
 type Tool struct {
 	mcp.Tool
-	IsForbidden bool `json:"isForbidden"`
+	IsAllowed bool `json:"isAllowed"`
 }
 
 type Server struct {

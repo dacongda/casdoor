@@ -21,6 +21,7 @@ import (
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/beego/beego/v2/server/web"
+	"github.com/casdoor/casdoor/mcp"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/util"
 )
@@ -290,4 +291,15 @@ func (c *ApiController) Finish() {
 		}
 	}
 	c.Controller.Finish()
+}
+
+func (c *ApiController) McpResponseError(id interface{}, code int, message string, data interface{}) {
+	resp := mcp.BuildMcpResponse(id, nil, &mcp.McpError{
+		Code:    code,
+		Message: message,
+		Data:    data,
+	})
+	c.Ctx.Output.Header("Content-Type", "application/json")
+	c.Data["json"] = resp
+	c.ServeJSON()
 }

@@ -15,11 +15,19 @@
 package object
 
 import (
+	"context"
 	"fmt"
 
 	"github.com/casdoor/casdoor/util"
 	"github.com/xorm-io/core"
+
+	"github.com/modelcontextprotocol/go-sdk/mcp"
 )
+
+type Tool struct {
+	mcp.Tool
+	IsForbidden bool `json:"isForbidden"`
+}
 
 type Server struct {
 	Owner       string `xorm:"varchar(100) notnull pk" json:"owner"`
@@ -28,8 +36,10 @@ type Server struct {
 	UpdatedTime string `xorm:"varchar(100)" json:"updatedTime"`
 	DisplayName string `xorm:"varchar(100)" json:"displayName"`
 
-	Url         string `xorm:"varchar(500)" json:"url"`
-	Application string `xorm:"varchar(100)" json:"application"`
+	Url         string            `xorm:"varchar(500)" json:"url"`
+	HttpHeaders map[string]string `xorm:"varchar(500)" json:"httpHeaders"`
+	Application string            `xorm:"varchar(100)" json:"application"`
+	Tools       []*Tool           `xorm:"mediumtext" json:"tools"`
 }
 
 func GetServers(owner string) ([]*Server, error) {
@@ -114,4 +124,21 @@ func GetPaginationServers(owner string, offset, limit int, field, value, sortFie
 	}
 
 	return servers, nil
+}
+
+func GetServerTools(server *Server) ([]*mcp.Tool, error) {
+	ctx := context.Background()
+	client := mcp.NewClient(&mcp.Implementation{Name: util.GetId(server.Owner, server.Name), Version: "1.0.0"}, nil)
+	session, err := client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: server.Url}, nil)
+	if err != nil {
+		return nil, err
+	}
+	defer session.Close()
+
+	toolResult, err := session.ListTools(ctx, nil)
+	if err != nil {
+		return nil, err
+	}
+
+	return toolResult.Tools, nil
 }

@@ -54,3 +54,10 @@ export function deleteServer(server) {
     body: JSON.stringify(newServer),
   }).then(res => res.json());
 }
+
+export function getServerTools(owner, name) {
+  return fetch(`${Setting.ServerUrl}/api/get-server-tools?id=${owner}/${encodeURIComponent(name)}`, {
+    method: "GET",
+    credentials: "include",
+  }).then(res => res.json());
+}

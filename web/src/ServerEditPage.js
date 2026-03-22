@@ -20,6 +20,8 @@ import * as Setting from "./Setting";
 import i18next from "i18next";
 import * as OrganizationBackend from "./backend/OrganizationBackend";
 import * as ApplicationBackend from "./backend/ApplicationBackend";
+import ToolTable from "./ToolTable";
+import HttpHeaderTable from "./table/HttpHeaderTable";
 
 const {Option} = Select;
 
@@ -55,6 +57,8 @@ class ServerEditPage extends React.Component {
           this.setState({
             server: res.data,
           });
+
+          this.getServerTools(res.data);
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to get")}: ${res.msg}`);
         }
@@ -134,6 +138,29 @@ class ServerEditPage extends React.Component {
       });
   }
 
+  getServerTools(server) {
+    ServerBackend.getServerTools(server.owner, server.name)
+      .then((res) => {
+        if (res.status === "ok") {
+          const tools = res.data || [];
+          res.data.map((tool, idx) => {
+            const oldTool = this.state.server.tools?.find(t => t.name === tool.name);
+            if (oldTool) {
+              tools[idx].isForbidden = oldTool.isForbidden;
+            } else {
+              tools[idx].isForbidden = false;
+            }
+          });
+          this.updateServerField("tools", tools);
+        } else {
+          Setting.showMessage("error", `${i18next.t("general:Failed to get")}: ${res.msg}`);
+        }
+      })
+      .catch(error => {
+        Setting.showMessage("error", `${i18next.t("general:Failed to connect to server")}: ${error}`);
+      });
+  }
+
   renderServer() {
     return (
       <Card size="small" title={
@@ -188,6 +215,14 @@ class ServerEditPage extends React.Component {
         </Row>
         <Row style={{marginTop: "20px"}} >
           <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+            {Setting.getLabel(i18next.t("provider:HTTP header"), i18next.t("provider:HTTP header - Tooltip"))} :
+          </Col>
+          <Col span={22} >
+            <HttpHeaderTable httpHeaders={this.state.server?.httpHeaders || []} onUpdateTable={(value) => {this.updateServerField("httpHeaders", value);}} />
+          </Col>
+        </Row>
+        <Row style={{marginTop: "20px"}} >
+          <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
             {Setting.getLabel(i18next.t("general:Application"), i18next.t("general:Application - Tooltip"))} :
           </Col>
           <Col span={22} >
@@ -196,6 +231,17 @@ class ServerEditPage extends React.Component {
                 this.state.applications.map((application, index) => <Option key={index} value={application.name}>{application.name}</Option>)
               }
             </Select>
+          </Col>
+        </Row>
+        <Row style={{marginTop: "20px"}} >
+          <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+            {Setting.getLabel(i18next.t("general:Tool"), i18next.t("general:Tool - Tooltip"))} :
+          </Col>
+          <Col span={22} >
+            <ToolTable
+              tools={this.state.server?.tools || []}
+              onUpdateTable={(value) => {this.updateServerField("tools", value);}}
+            />
           </Col>
         </Row>
         <Row style={{marginTop: "20px"}} >

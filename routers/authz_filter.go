@@ -334,7 +334,7 @@ func ApiFilter(ctx *context.Context) {
 	}
 
 	if !isAllowed {
-		if urlPath == "/api/mcp" {
+		if urlPath == "/api/mcp" || strings.HasPrefix(urlPath, "/api/server/") {
 			denyMcpRequest(ctx)
 		} else {
 			denyRequest(ctx)

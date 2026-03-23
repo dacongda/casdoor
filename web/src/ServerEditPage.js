@@ -55,10 +55,6 @@ class ServerEditPage extends React.Component {
         if (res.status === "ok") {
           this.setState({
             server: res.data,
-          }, () => {
-            if (this.state.server?.url !== "") {
-              this.getServerTools(this.state.server);
-            }
           });
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to get")}: ${res.msg}`);
@@ -132,29 +128,6 @@ class ServerEditPage extends React.Component {
           this.props.history.push("/servers");
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to delete")}: ${res.msg}`);
-        }
-      })
-      .catch(error => {
-        Setting.showMessage("error", `${i18next.t("general:Failed to connect to server")}: ${error}`);
-      });
-  }
-
-  getServerTools(server) {
-    ServerBackend.getServerTools(server.owner, server.name)
-      .then((res) => {
-        if (res.status === "ok") {
-          const tools = res.data || [];
-          res.data?.forEach((tool, idx) => {
-            const oldTool = this.state.server.tools?.find(t => t.name === tool.name);
-            if (oldTool) {
-              tools[idx].isAllowed = oldTool.isAllowed;
-            } else {
-              tools[idx].isAllowed = true;
-            }
-          });
-          this.updateServerField("tools", tools);
-        } else {
-          Setting.showMessage("error", `${i18next.t("general:Failed to get")}: ${res.msg}`);
         }
       })
       .catch(error => {
@@ -241,7 +214,6 @@ class ServerEditPage extends React.Component {
             {Setting.getLabel(i18next.t("general:Tool"), i18next.t("general:Tool - Tooltip"))} :
           </Col>
           <Col span={22} >
-            <Button style={{marginBottom: "12px"}} type="primary" onClick={() => this.getServerTools(this.state.server)}>{i18next.t("server:Sync tools")}</Button>
             <ToolTable
               tools={this.state.server?.tools || []}
               onUpdateTable={(value) => {this.updateServerField("tools", value);}}

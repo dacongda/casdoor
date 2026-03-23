@@ -17,6 +17,7 @@ package object
 import (
 	"context"
 	"fmt"
+	"slices"
 	"time"
 
 	"github.com/casdoor/casdoor/util"
@@ -81,12 +82,44 @@ func UpdateServer(id string, server *Server) (bool, error) {
 
 	server.UpdatedTime = util.GetCurrentTime()
 
+	syncServerTools(server)
 	_, err := ormer.Engine.ID(core.PK{owner, name}).AllCols().Update(server)
 	if err != nil {
 		return false, err
 	}
 
 	return true, nil
+}
+
+func syncServerTools(server *Server) {
+	if server.Tools == nil {
+		server.Tools = []*Tool{}
+	}
+
+	tools, err := GetServerTools(server)
+	if err != nil {
+		return
+	}
+
+	var newTools []*Tool
+	for _, tool := range tools {
+		oldToolIndex := slices.IndexFunc(server.Tools, func(oldTool *Tool) bool {
+			return oldTool.Name == tool.Name
+		})
+
+		isAllowed := true
+		if oldToolIndex != -1 {
+			isAllowed = server.Tools[oldToolIndex].IsAllowed
+		}
+
+		newTool := Tool{
+			Tool:      *tool,
+			IsAllowed: isAllowed,
+		}
+		newTools = append(newTools, &newTool)
+	}
+
+	server.Tools = newTools
 }
 
 func AddServer(server *Server) (bool, error) {

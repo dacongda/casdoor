@@ -17,6 +17,7 @@ package object
 import (
 	"context"
 	"fmt"
+	"time"
 
 	"github.com/casdoor/casdoor/util"
 	"github.com/modelcontextprotocol/go-sdk/mcp"
@@ -130,7 +131,8 @@ func GetServerTools(server *Server) ([]*mcp.Tool, error) {
 	var session *mcp.ClientSession
 	var err error
 
-	ctx := context.Background()
+	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
+	defer cancel()
 	client := mcp.NewClient(&mcp.Implementation{Name: util.GetId(server.Owner, server.Name), Version: "1.0.0"}, nil)
 	if server.Token != "" {
 		httpClient := oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: server.Token}))

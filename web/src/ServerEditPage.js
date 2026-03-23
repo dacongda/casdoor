@@ -108,7 +108,7 @@ class ServerEditPage extends React.Component {
               mode: "edit",
               owner: server.owner,
               serverName: server.name,
-            });
+            }, () => {this.getServer();});
             this.props.history.push(`/servers/${server.owner}/${server.name}`);
           }
         } else {

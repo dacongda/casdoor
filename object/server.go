@@ -15,19 +15,17 @@
 package object
 
 import (
-	"context"
 	"fmt"
 	"slices"
-	"time"
 
+	"github.com/casdoor/casdoor/mcp"
 	"github.com/casdoor/casdoor/util"
-	"github.com/modelcontextprotocol/go-sdk/mcp"
+	mcpsdk "github.com/modelcontextprotocol/go-sdk/mcp"
 	"github.com/xorm-io/core"
-	"golang.org/x/oauth2"
 )
 
 type Tool struct {
-	mcp.Tool
+	mcpsdk.Tool
 	IsAllowed bool `json:"isAllowed"`
 }
 
@@ -96,7 +94,7 @@ func syncServerTools(server *Server) {
 		server.Tools = []*Tool{}
 	}
 
-	tools, err := GetServerTools(server)
+	tools, err := mcp.GetServerTools(server.Owner, server.Name, server.Url, server.Token)
 	if err != nil {
 		return
 	}
@@ -158,31 +156,4 @@ func GetPaginationServers(owner string, offset, limit int, field, value, sortFie
 	}
 
 	return servers, nil
-}
-
-func GetServerTools(server *Server) ([]*mcp.Tool, error) {
-	var session *mcp.ClientSession
-	var err error
-
-	ctx, cancel := context.WithTimeout(context.Background(), time.Minute*10)
-	defer cancel()
-	client := mcp.NewClient(&mcp.Implementation{Name: util.GetId(server.Owner, server.Name), Version: "1.0.0"}, nil)
-	if server.Token != "" {
-		httpClient := oauth2.NewClient(ctx, oauth2.StaticTokenSource(&oauth2.Token{AccessToken: server.Token}))
-		session, err = client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: server.Url, HTTPClient: httpClient}, nil)
-	} else {
-		session, err = client.Connect(ctx, &mcp.StreamableClientTransport{Endpoint: server.Url}, nil)
-	}
-
-	if err != nil {
-		return nil, err
-	}
-	defer session.Close()
-
-	toolResult, err := session.ListTools(ctx, nil)
-	if err != nil {
-		return nil, err
-	}
-
-	return toolResult.Tools, nil
 }

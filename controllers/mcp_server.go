@@ -20,7 +20,7 @@ import (
 	"net/http/httputil"
 	"net/url"
 
-	"github.com/casdoor/casdoor/mcp"
+	"github.com/casdoor/casdoor/mcpself"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/util"
 )
@@ -37,7 +37,7 @@ func (c *ApiController) ProxyServer() {
 	owner := c.Ctx.Input.Param(":owner")
 	name := c.Ctx.Input.Param(":name")
 
-	var mcpReq *mcp.McpRequest
+	var mcpReq *mcpself.McpRequest
 	err := json.Unmarshal(c.Ctx.Input.RequestBody, &mcpReq)
 	if err != nil {
 		c.McpResponseError(1, -32700, "Parse error", err.Error())
@@ -73,7 +73,7 @@ func (c *ApiController) ProxyServer() {
 	}
 
 	if mcpReq.Method == "tools/call" {
-		var params mcp.McpCallToolParams
+		var params mcpself.McpCallToolParams
 		err = json.Unmarshal(mcpReq.Params, &params)
 		if err != nil {
 			c.McpResponseError(mcpReq.ID, -32600, "Invalid request", err.Error())

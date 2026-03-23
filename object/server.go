@@ -37,7 +37,7 @@ type Server struct {
 	DisplayName string `xorm:"varchar(100)" json:"displayName"`
 
 	Url         string  `xorm:"varchar(500)" json:"url"`
-	Token       string  `xorm:"varchar(500)" json:"token"`
+	Token       string  `xorm:"varchar(500)" json:"-"`
 	Application string  `xorm:"varchar(100)" json:"application"`
 	Tools       []*Tool `xorm:"mediumtext" json:"tools"`
 }

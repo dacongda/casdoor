@@ -221,7 +221,7 @@ func (c *ApiController) ProxyServer() {
 	proxy := httputil.NewSingleHostReverseProxy(targetUrl)
 	proxy.ErrorHandler = func(writer http.ResponseWriter, request *http.Request, proxyErr error) {
 		c.Ctx.Output.SetStatus(http.StatusBadGateway)
-		c.McpResponseError(mcpReq.ID, -32603, "failed to proxy server request: %s", err.Error())
+		c.McpResponseError(mcpReq.ID, -32603, "failed to proxy server request: %s", proxyErr.Error())
 	}
 	proxy.Director = func(request *http.Request) {
 		request.URL.Scheme = targetUrl.Scheme
@@ -245,7 +245,7 @@ func (c *ApiController) ProxyServer() {
 // @Description get mcp server tool list
 // @Param   id    query    string  true        "The owner name of the server"
 // @Success 200 {object} controllers.Response The Response object
-// @router /server/:owner/:name [post]
+// @router /server/get-server-tools [get]
 func (c *ApiController) GetServerTools() {
 	id := c.Ctx.Input.Query("id")
 

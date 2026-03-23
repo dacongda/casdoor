@@ -55,11 +55,11 @@ class ServerEditPage extends React.Component {
         if (res.status === "ok") {
           this.setState({
             server: res.data,
+          }, () => {
+            if (this.state.server?.url !== "") {
+              this.getServerTools(this.state.server);
+            }
           });
-
-          if (res.data.url !== "") {
-            this.getServerTools(res.data);
-          }
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to get")}: ${res.msg}`);
         }
@@ -144,7 +144,7 @@ class ServerEditPage extends React.Component {
       .then((res) => {
         if (res.status === "ok") {
           const tools = res.data || [];
-          res.data?.map((tool, idx) => {
+          res.data?.forEach((tool, idx) => {
             const oldTool = this.state.server.tools?.find(t => t.name === tool.name);
             if (oldTool) {
               tools[idx].isAllowed = oldTool.isAllowed;
@@ -219,7 +219,7 @@ class ServerEditPage extends React.Component {
             {Setting.getLabel(i18next.t("token:Access token"), i18next.t("token:Access token - Tooltip"))} :
           </Col>
           <Col span={22} >
-            <Input value={this.state.server.token} onChange={e => {
+            <Input.Password placeholder={"***"} value={this.state.server.token} onChange={e => {
               this.updateServerField("token", e.target.value);
             }} />
           </Col>

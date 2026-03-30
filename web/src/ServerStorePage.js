@@ -65,7 +65,7 @@ class ServerStorePage extends React.Component {
 
   getOnlineServerName = (onlineServer) => {
     const source = onlineServer.id || onlineServer.name || `server_${Setting.getRandomName()}`;
-    const normalized = source.toLowerCase().replace(/[^a-z0-9_-]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
+    const normalized = String(source).toLowerCase().replace(/[^a-z0-9_-]/g, "_").replace(/_+/g, "_").replace(/^_+|_+$/g, "");
     return normalized || `server_${Setting.getRandomName()}`;
   };
 
@@ -75,7 +75,7 @@ class ServerStorePage extends React.Component {
     const serverUrl = onlineServer.production;
 
     if (!serverUrl) {
-      Setting.showMessage("error", `${i18next.t("general:Failed to add")}: production endpoint is empty`);
+      Setting.showMessage("error", i18next.t("server:Production endpoint is empty"));
       return;
     }
 

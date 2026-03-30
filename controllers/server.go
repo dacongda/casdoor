@@ -16,11 +16,16 @@ package controllers
 
 import (
 	"encoding/json"
+	"fmt"
+	"net/http"
+	"time"
 
 	"github.com/beego/beego/v2/server/web/pagination"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/util"
 )
+
+const onlineServerListUrl = "https://remotemcplist.com/api/servers.json"
 
 // GetServers
 // @Title GetServers
@@ -146,4 +151,36 @@ func (c *ApiController) DeleteServer() {
 
 	c.Data["json"] = wrapActionResponse(object.DeleteServer(&server))
 	c.ServeJSON()
+}
+
+// GetOnlineServerList
+// @Title GetOnlineServerList
+// @Tag Server API
+// @Description get online MCP server list
+// @Success 200 {object} controllers.Response The Response object
+// @router /get-online-server-list [get]
+func (c *ApiController) GetOnlineServerList() {
+	httpClient := &http.Client{Timeout: 10 * time.Second}
+	resp, err := httpClient.Get(onlineServerListUrl)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+	defer func() {
+		_ = resp.Body.Close()
+	}()
+
+	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
+		c.ResponseError(fmt.Sprintf("failed to get online server list, status code: %d", resp.StatusCode))
+		return
+	}
+
+	var onlineServers interface{}
+	err = json.NewDecoder(resp.Body).Decode(&onlineServers)
+	if err != nil {
+		c.ResponseError(err.Error())
+		return
+	}
+
+	c.ResponseOk(onlineServers)
 }

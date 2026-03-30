@@ -21,6 +21,13 @@ export function getServers(owner, page = "", pageSize = "", field = "", value = 
   }).then(res => res.json());
 }
 
+export function getOnlineServerList() {
+  return fetch(`${Setting.ServerUrl}/api/get-online-server-list`, {
+    method: "GET",
+    credentials: "include",
+  }).then(res => res.json());
+}
+
 export function getServer(owner, name) {
   return fetch(`${Setting.ServerUrl}/api/get-server?id=${owner}/${encodeURIComponent(name)}`, {
     method: "GET",

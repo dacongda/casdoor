@@ -21,13 +21,13 @@ import (
 	"time"
 )
 
-// GetOnlineServer
-// @Title GetOnlineServer
+// GetOnlineServers
+// @Title GetOnlineServers
 // @Tag Server API
 // @Description get online MCP server list
 // @Success 200 {object} controllers.Response The Response object
-// @router /get-online-server [get]
-func (c *ApiController) GetOnlineServer() {
+// @router /get-online-servers [get]
+func (c *ApiController) GetOnlineServers() {
 	httpClient := &http.Client{Timeout: 10 * time.Second}
 	resp, err := httpClient.Get(onlineServerListUrl)
 	if err != nil {

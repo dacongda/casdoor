@@ -134,7 +134,7 @@ func InitAPI() {
 	web.Router("/api/delete-site", &controllers.ApiController{}, "POST:DeleteSite")
 
 	web.Router("/api/get-servers", &controllers.ApiController{}, "GET:GetServers")
-	web.Router("/api/get-online-server", &controllers.ApiController{}, "GET:GetOnlineServer")
+	web.Router("/api/get-online-servers", &controllers.ApiController{}, "GET:GetOnlineServers")
 	web.Router("/api/get-server", &controllers.ApiController{}, "GET:GetServer")
 	web.Router("/api/update-server", &controllers.ApiController{}, "POST:UpdateServer")
 	web.Router("/api/add-server", &controllers.ApiController{}, "POST:AddServer")

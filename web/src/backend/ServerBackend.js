@@ -21,7 +21,7 @@ export function getServers(owner, page = "", pageSize = "", field = "", value = 
   }).then(res => res.json());
 }
 
-export function getOnlineServerList() {
+export function getOnlineServers() {
   return fetch(`${Setting.ServerUrl}/api/get-online-servers`, {
     method: "GET",
     credentials: "include",

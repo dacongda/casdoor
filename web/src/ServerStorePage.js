@@ -44,7 +44,7 @@ class ServerStorePage extends React.Component {
       onlineTagFilter: [],
     });
 
-    ServerBackend.getOnlineServerList()
+    ServerBackend.getOnlineServers()
       .then((res) => {
         if (res.status === "ok") {
           const onlineServerList = this.normalizeOnlineServers(this.getOnlineServersFromResponse(res.data));

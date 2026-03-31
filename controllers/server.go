@@ -22,8 +22,6 @@ import (
 	"github.com/casdoor/casdoor/util"
 )
 
-const onlineServerListUrl = "https://remotemcplist.com/api/servers.json"
-
 // GetServers
 // @Title GetServers
 // @Tag Server API

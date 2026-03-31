@@ -107,15 +107,17 @@ import TicketListPage from "./TicketListPage";
 import TicketEditPage from "./TicketEditPage";
 import * as Cookie from "cookie";
 import * as UserBackend from "./backend/UserBackend";
-import SiteListPage from "./SiteListPage";
-import SiteEditPage from "./SiteEditPage";
+import AgentListPage from "./AgentListPage";
+import AgentEditPage from "./AgentEditPage";
 import ServerListPage from "./ServerListPage";
 import ServerStorePage from "./ServerStorePage";
 import ServerEditPage from "./ServerEditPage";
-import AgentListPage from "./AgentListPage";
-import AgentEditPage from "./AgentEditPage";
-import RuleEditPage from "./RuleEditPage";
+import EntryListPage from "./EntryListPage";
+import EntryEditPage from "./EntryEditPage";
+import SiteListPage from "./SiteListPage";
+import SiteEditPage from "./SiteEditPage";
 import RuleListPage from "./RuleListPage";
+import RuleEditPage from "./RuleEditPage";
 
 function ManagementPage(props) {
   const [menuVisible, setMenuVisible] = useState(false);
@@ -356,7 +358,7 @@ function ManagementPage(props) {
       Setting.getItem(<Link to="/agents">{i18next.t("general:Agents")}</Link>, "/agents"),
       Setting.getItem(<Link to="/servers">{i18next.t("general:MCP Servers")}</Link>, "/servers"),
       Setting.getItem(<Link to="/server-store">{i18next.t("general:MCP Store")}</Link>, "/server-store"),
-      Setting.getItem(<Link to="/agents">{i18next.t("general:Agents")}</Link>, "/agents"),
+      Setting.getItem(<Link to="/entries">{i18next.t("general:Entries")}</Link>, "/entries"),
       Setting.getItem(<Link to="/sites">{i18next.t("general:Sites")}</Link>, "/sites"),
       Setting.getItem(<Link to="/rules">{i18next.t("general:Rules")}</Link>, "/rules"),
     ]));
@@ -502,11 +504,13 @@ function ManagementPage(props) {
         <Route exact path="/certs/:organizationName/:certName" render={(props) => renderLoginIfNotLoggedIn(<CertEditPage account={account} {...props} />)} />
         <Route exact path="/keys" render={(props) => renderLoginIfNotLoggedIn(<KeyListPage account={account} {...props} />)} />
         <Route exact path="/keys/:organizationName/:keyName" render={(props) => renderLoginIfNotLoggedIn(<KeyEditPage account={account} {...props} />)} />
+        <Route exact path="/agents" render={(props) => renderLoginIfNotLoggedIn(<AgentListPage account={account} {...props} />)} />
+        <Route exact path="/agents/:organizationName/:agentName" render={(props) => renderLoginIfNotLoggedIn(<AgentEditPage account={account} {...props} />)} />
         <Route exact path="/servers" render={(props) => renderLoginIfNotLoggedIn(<ServerListPage account={account} {...props} />)} />
         <Route exact path="/server-store" render={(props) => renderLoginIfNotLoggedIn(<ServerStorePage account={account} {...props} />)} />
         <Route exact path="/servers/:organizationName/:serverName" render={(props) => renderLoginIfNotLoggedIn(<ServerEditPage account={account} {...props} />)} />
-        <Route exact path="/agents" render={(props) => renderLoginIfNotLoggedIn(<AgentListPage account={account} {...props} />)} />
-        <Route exact path="/agents/:organizationName/:agentName" render={(props) => renderLoginIfNotLoggedIn(<AgentEditPage account={account} {...props} />)} />
+        <Route exact path="/entries" render={(props) => renderLoginIfNotLoggedIn(<EntryListPage account={account} {...props} />)} />
+        <Route exact path="/entries/:organizationName/:entryName" render={(props) => renderLoginIfNotLoggedIn(<EntryEditPage account={account} {...props} />)} />
         <Route exact path="/sites" render={(props) => renderLoginIfNotLoggedIn(<SiteListPage account={account} {...props} />)} />
         <Route exact path="/sites/:organizationName/:siteName" render={(props) => renderLoginIfNotLoggedIn(<SiteEditPage account={account} {...props} />)} />
         <Route exact path="/rules" render={(props) => renderLoginIfNotLoggedIn(<RuleListPage account={account} {...props} />)} />

@@ -41,11 +41,12 @@ export const NavItemTree = ({disabled, checkedKeys, defaultExpandedKeys, onCheck
           title: i18next.t("general:LLM AI"),
           key: "/sites-top",
           children: [
-            {title: i18next.t("general:Rules"), key: "/rules"},
-            {title: i18next.t("general:Sites"), key: "/sites"},
-            {title: i18next.t("general:MCP Store"), key: "/server-store"},
             {title: i18next.t("general:Agents"), key: "/agents"},
             {title: i18next.t("general:MCP Servers"), key: "/servers"},
+            {title: i18next.t("general:MCP Store"), key: "/server-store"},
+            {title: i18next.t("general:Entries"), key: "/entries"},
+            {title: i18next.t("general:Sites"), key: "/sites"},
+            {title: i18next.t("general:Rules"), key: "/rules"},
           ],
         },
         {

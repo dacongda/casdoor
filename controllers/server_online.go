@@ -21,6 +21,8 @@ import (
 	"time"
 )
 
+const onlineServerListUrl = "https://remotemcplist.com/api/servers.json"
+
 // GetOnlineServers
 // @Title GetOnlineServers
 // @Tag Server API

@@ -14,13 +14,14 @@
 
 import React from "react";
 import {Link} from "react-router-dom";
-import {Button, Modal, Select, Table} from "antd";
+import {Button, Table} from "antd";
 import moment from "moment";
 import * as Setting from "./Setting";
 import * as ServerBackend from "./backend/ServerBackend";
 import i18next from "i18next";
 import BaseListPage from "./BaseListPage";
 import PopconfirmModal from "./common/modal/PopconfirmModal";
+import ScanServerModal from "./common/modal/ScanServerModal";
 
 class ServerListPage extends BaseListPage {
   constructor(props) {
@@ -294,76 +295,6 @@ class ServerListPage extends BaseListPage {
       showTotal: () => i18next.t("general:{total} in total").replace("{total}", this.state.pagination.total),
     };
 
-    const scanColumns = [
-      {
-        title: i18next.t("general:Host"),
-        dataIndex: "host",
-        key: "host",
-        width: "140px",
-      },
-      {
-        title: i18next.t("general:Port"),
-        dataIndex: "port",
-        key: "port",
-        width: "90px",
-      },
-      {
-        title: i18next.t("general:Path"),
-        dataIndex: "path",
-        key: "path",
-        width: "120px",
-      },
-      {
-        title: i18next.t("general:URL"),
-        dataIndex: "url",
-        key: "url",
-        render: (text) => {
-          if (!text) {
-            return null;
-          }
-
-          return (
-            <a target="_blank" rel="noreferrer" href={text}>
-              {Setting.getShortText(text, 60)}
-            </a>
-          );
-        },
-      },
-      {
-        title: i18next.t("general:Action"),
-        dataIndex: "scanOp",
-        key: "scanOp",
-        width: "120px",
-        render: (_, record) => {
-          return (
-            <Button size="small" type="primary" onClick={() => this.addScannedServer(record)}>
-              {i18next.t("general:Add")}
-            </Button>
-          );
-        },
-      },
-    ];
-
-    const scanCidrOptions = [
-      {label: "127.0.0.1/32", value: "127.0.0.1/32"},
-      {label: "10.0.0.0/24", value: "10.0.0.0/24"},
-      {label: "172.16.0.0/24", value: "172.16.0.0/24"},
-      {label: "192.168.1.0/24", value: "192.168.1.0/24"},
-    ];
-    const scanPortOptions = [
-      {label: "1-65535", value: "1-65535"},
-      {label: "80", value: "80"},
-      {label: "443", value: "443"},
-      {label: "3000", value: "3000"},
-      {label: "8080", value: "8080"},
-    ];
-    const scanPathOptions = [
-      {label: "/", value: "/"},
-      {label: "/mcp", value: "/mcp"},
-      {label: "/sse", value: "/sse"},
-      {label: "/mcp/sse", value: "/mcp/sse"},
-    ];
-
     return (
       <>
         <Table
@@ -387,62 +318,21 @@ class ServerListPage extends BaseListPage {
             </div>
           )}
         />
-
-        <Modal
-          title="Scan server"
+        <ScanServerModal
           open={this.state.showScanModal}
-          width={960}
-          confirmLoading={this.state.scanLoading}
-          onOk={this.submitScan}
+          loading={this.state.scanLoading}
+          scanCidrs={this.state.scanCidrs}
+          scanPorts={this.state.scanPorts}
+          scanPaths={this.state.scanPaths}
+          scanResult={this.state.scanResult}
+          scanServers={this.state.scanServers}
+          onSubmit={this.submitScan}
           onCancel={this.closeScanModal}
-          okText={i18next.t("general:Sync")}
-        >
-          <div style={{marginBottom: "12px"}}>IP range</div>
-          <Select
-            mode="tags"
-            style={{width: "100%"}}
-            value={this.state.scanCidrs}
-            options={scanCidrOptions}
-            onChange={(value) => this.setState({scanCidrs: value})}
-            placeholder="Select or input CIDR/IP"
-          />
-
-          <div style={{marginTop: "16px", marginBottom: "12px"}}>Ports</div>
-          <Select
-            mode="tags"
-            style={{width: "100%"}}
-            value={this.state.scanPorts}
-            options={scanPortOptions}
-            onChange={(value) => this.setState({scanPorts: value})}
-            placeholder="Select or input ports"
-          />
-
-          <div style={{marginTop: "16px", marginBottom: "12px"}}>Paths</div>
-          <Select
-            mode="tags"
-            style={{width: "100%"}}
-            value={this.state.scanPaths}
-            options={scanPathOptions}
-            onChange={(value) => this.setState({scanPaths: value})}
-            placeholder="Select or input paths"
-          />
-
-          {this.state.scanResult !== null ? (
-            <Table
-              style={{marginTop: "16px"}}
-              scroll={{x: "max-content", y: 320}}
-              dataSource={this.state.scanServers}
-              columns={scanColumns}
-              rowKey={(record, index) => `${record.url}-${index}`}
-              pagination={false}
-              size="middle"
-              bordered
-              title={() => {
-                return `Scanned hosts: ${this.state.scanResult?.scannedHosts ?? 0}, online hosts: ${this.state.scanResult?.onlineHosts?.length ?? 0}, found servers: ${this.state.scanServers.length}`;
-              }}
-            />
-          ) : null}
-        </Modal>
+          onChangeCidrs={(value) => this.setState({scanCidrs: value})}
+          onChangePorts={(value) => this.setState({scanPorts: value})}
+          onChangePaths={(value) => this.setState({scanPaths: value})}
+          onAddScannedServer={this.addScannedServer}
+        />
       </>
     );
   }

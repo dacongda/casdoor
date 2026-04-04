@@ -57,7 +57,7 @@ type SyncInnerServersResult struct {
 // @Title SyncIntranetServers
 // @Tag Server API
 // @Description scan intranet IP/CIDR targets and detect MCP servers by probing common ports and paths
-// @Param   body    body   mcp.InnerMcpServer  true  "Scan request"
+// @Param   body    body   controllers.SyncInnerServersRequest  true  "Intranet MCP server scan request"
 // @Success 200 {object} controllers.Response The Response object
 // @router /sync-intranet-servers [post]
 func (c *ApiController) SyncIntranetServers() {
@@ -76,7 +76,7 @@ func (c *ApiController) SyncIntranetServers() {
 		req.CIDR[i] = strings.TrimSpace(req.CIDR[i])
 	}
 	if len(req.CIDR) == 0 {
-		c.ResponseError("cidr is required")
+		c.ResponseError("scan target (CIDR/IP) is required")
 		return
 	}
 

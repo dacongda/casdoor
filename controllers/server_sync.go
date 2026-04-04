@@ -38,7 +38,7 @@ var (
 )
 
 type SyncInnerServersRequest struct {
-	CIDR           string   `json:"cidr"`
+	CIDR           []string `json:"cidr"`
 	Scheme         string   `json:"scheme"`
 	Ports          []int    `json:"ports"`
 	Paths          []string `json:"paths"`
@@ -58,7 +58,7 @@ type SyncInnerMcpServer struct {
 }
 
 type SyncInnerServersResult struct {
-	CIDR         string                `json:"cidr"`
+	CIDR         []string              `json:"cidr"`
 	ScannedHosts int                   `json:"scannedHosts"`
 	OnlineHosts  []string              `json:"onlineHosts"`
 	Servers      []*SyncInnerMcpServer `json:"servers"`
@@ -67,7 +67,7 @@ type SyncInnerServersResult struct {
 // SyncInnerServers
 // @Title SyncInnerServers
 // @Tag Server API
-// @Description scan an intranet CIDR and detect MCP servers by probing common ports and paths
+// @Description scan intranet IP/CIDR targets and detect MCP servers by probing common ports and paths
 // @Param   body    body   controllers.SyncInnerServersRequest  true  "Scan request"
 // @Success 200 {object} controllers.Response The Response object
 // @router /sync-inner-servers [post]
@@ -83,13 +83,15 @@ func (c *ApiController) SyncInnerServers() {
 		return
 	}
 
-	req.CIDR = strings.TrimSpace(req.CIDR)
-	if req.CIDR == "" {
+	for i := range req.CIDR {
+		req.CIDR[i] = strings.TrimSpace(req.CIDR[i])
+	}
+	if len(req.CIDR) == 0 {
 		c.ResponseError("cidr is required")
 		return
 	}
 
-	hosts, err := mcp.ParseCIDRHosts(req.CIDR, maxSyncHosts)
+	hosts, err := mcp.ParseScanTargets(req.CIDR, maxSyncHosts)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

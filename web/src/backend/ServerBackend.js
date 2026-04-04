@@ -61,3 +61,11 @@ export function deleteServer(server) {
     body: JSON.stringify(newServer),
   }).then(res => res.json());
 }
+
+export function syncInnerServers(scanRequest) {
+  return fetch(`${Setting.ServerUrl}/api/sync-inner-servers`, {
+    method: "POST",
+    credentials: "include",
+    body: JSON.stringify(scanRequest),
+  }).then(res => res.json());
+}

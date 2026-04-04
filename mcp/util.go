@@ -15,12 +15,9 @@
 package mcp
 
 import (
-	"bytes"
 	"context"
 	"encoding/binary"
-	"encoding/json"
 	"fmt"
-	"io"
 	"net"
 	"net/http"
 	"strconv"
@@ -40,18 +37,6 @@ type InnerMcpServer struct {
 	ProtocolVersion string `json:"protocolVersion"`
 	ServerName      string `json:"serverName"`
 	ServerVersion   string `json:"serverVersion"`
-}
-
-type initializeResponse struct {
-	JSONRPC string `json:"jsonrpc"`
-	Result  struct {
-		ProtocolVersion string `json:"protocolVersion"`
-		ServerInfo      struct {
-			Name    string `json:"name"`
-			Version string `json:"version"`
-		} `json:"serverInfo"`
-	} `json:"result"`
-	Error interface{} `json:"error"`
 }
 
 func GetServerTools(owner, name, url, token string) ([]*mcpsdk.Tool, error) {
@@ -159,6 +144,66 @@ func SanitizePaths(paths []string, defaultPaths []string) []string {
 	return result
 }
 
+func ParseScanTargets(targets []string, maxHosts int) ([]net.IP, error) {
+	hostSet := map[uint32]struct{}{}
+	hosts := make([]net.IP, 0)
+
+	addHost := func(ipv4 net.IP) error {
+		value := binary.BigEndian.Uint32(ipv4)
+		if _, ok := hostSet[value]; ok {
+			return nil
+		}
+		if len(hosts) >= maxHosts {
+			return fmt.Errorf("scan targets exceed max %d hosts", maxHosts)
+		}
+		hostSet[value] = struct{}{}
+		host := make(net.IP, net.IPv4len)
+		copy(host, ipv4)
+		hosts = append(hosts, host)
+		return nil
+	}
+
+	for _, target := range targets {
+		target = strings.TrimSpace(target)
+		if target == "" {
+			continue
+		}
+
+		if ip := net.ParseIP(target); ip != nil {
+			ipv4 := ip.To4()
+			if ipv4 == nil {
+				return nil, fmt.Errorf("only IPv4 is supported: %s", target)
+			}
+			if !util.IsIntranetIp(ipv4.String()) {
+				return nil, fmt.Errorf("target must be intranet: %s", target)
+			}
+			if err := addHost(ipv4); err != nil {
+				return nil, err
+			}
+			continue
+		}
+
+		cidrHosts, err := ParseCIDRHosts(target, maxHosts)
+		if err != nil {
+			return nil, err
+		}
+		for _, host := range cidrHosts {
+			if !util.IsIntranetIp(host.String()) {
+				return nil, fmt.Errorf("target must be intranet: %s", target)
+			}
+			if err = addHost(host.To4()); err != nil {
+				return nil, err
+			}
+		}
+	}
+
+	if len(hosts) == 0 {
+		return nil, fmt.Errorf("cidr is required")
+	}
+
+	return hosts, nil
+}
+
 func ParseCIDRHosts(cidr string, maxHosts int) ([]net.IP, error) {
 	baseIp, ipNet, err := net.ParseCIDR(cidr)
 	if err != nil {
@@ -211,9 +256,13 @@ func ParseCIDRHosts(cidr string, maxHosts int) ([]net.IP, error) {
 }
 
 func ProbeHost(ctx context.Context, client *http.Client, scheme, host string, ports []int, paths []string, token string, timeout time.Duration) (bool, []*InnerMcpServer) {
+	if !util.IsIntranetIp(host) {
+		return false, nil
+	}
+
 	dialer := &net.Dialer{Timeout: timeout}
 	isOnline := false
-	servers := []*InnerMcpServer{}
+	var servers []*InnerMcpServer
 
 	for _, port := range ports {
 		address := net.JoinHostPort(host, strconv.Itoa(port))
@@ -238,31 +287,10 @@ func ProbeHost(ctx context.Context, client *http.Client, scheme, host string, po
 func probeMcpInitialize(ctx context.Context, client *http.Client, scheme, host string, port int, path, token string) (*InnerMcpServer, bool) {
 	fullUrl := fmt.Sprintf("%s://%s%s", scheme, net.JoinHostPort(host, strconv.Itoa(port)), path)
 
-	payload := map[string]interface{}{
-		"jsonrpc": "2.0",
-		"id":      1,
-		"method":  "initialize",
-		"params": map[string]interface{}{
-			"protocolVersion": "2024-11-05",
-			"capabilities":    map[string]interface{}{},
-			"clientInfo": map[string]interface{}{
-				"name":    "Casdoor Sync",
-				"version": "1.0.0",
-			},
-		},
-	}
-
-	body, err := json.Marshal(payload)
+	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullUrl, nil)
 	if err != nil {
 		return nil, false
 	}
-
-	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullUrl, bytes.NewReader(body))
-	if err != nil {
-		return nil, false
-	}
-	httpReq.Header.Set("Content-Type", "application/json")
-	httpReq.Header.Set("Accept", "application/json")
 	if token != "" {
 		httpReq.Header.Set("Authorization", "Bearer "+token)
 	}
@@ -275,34 +303,14 @@ func probeMcpInitialize(ctx context.Context, client *http.Client, scheme, host s
 		_ = resp.Body.Close()
 	}()
 
-	if resp.StatusCode < http.StatusOK || resp.StatusCode >= http.StatusMultipleChoices {
-		return nil, false
-	}
-
-	respBody, err := io.ReadAll(io.LimitReader(resp.Body, 1<<20))
-	if err != nil {
-		return nil, false
-	}
-
-	var initResp initializeResponse
-	if err = json.Unmarshal(respBody, &initResp); err != nil {
-		return nil, false
-	}
-
-	if initResp.JSONRPC != "2.0" || initResp.Error != nil {
-		return nil, false
-	}
-	if initResp.Result.ProtocolVersion == "" && initResp.Result.ServerInfo.Name == "" {
+	if resp.StatusCode == http.StatusNotFound {
 		return nil, false
 	}
 
 	return &InnerMcpServer{
-		Host:            host,
-		Port:            port,
-		Path:            path,
-		Url:             fullUrl,
-		ProtocolVersion: initResp.Result.ProtocolVersion,
-		ServerName:      initResp.Result.ServerInfo.Name,
-		ServerVersion:   initResp.Result.ServerInfo.Version,
+		Host: host,
+		Port: port,
+		Path: path,
+		Url:  fullUrl,
 	}, true
 }

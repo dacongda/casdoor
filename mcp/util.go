@@ -30,13 +30,10 @@ import (
 )
 
 type InnerMcpServer struct {
-	Host            string `json:"host"`
-	Port            int    `json:"port"`
-	Path            string `json:"path"`
-	Url             string `json:"url"`
-	ProtocolVersion string `json:"protocolVersion"`
-	ServerName      string `json:"serverName"`
-	ServerVersion   string `json:"serverVersion"`
+	Host string `json:"host"`
+	Port int    `json:"port"`
+	Path string `json:"path"`
+	Url  string `json:"url"`
 }
 
 func GetServerTools(owner, name, url, token string) ([]*mcpsdk.Tool, error) {
@@ -232,10 +229,10 @@ func ParseCIDRHosts(cidr string, maxHosts int) ([]net.IP, error) {
 		return nil, fmt.Errorf("cidr range is too large, max %d hosts", maxHosts)
 	}
 
+	totalInt := int(total)
 	start := binary.BigEndian.Uint32(ipv4.Mask(ipNet.Mask))
 	end := start + uint32(total) - 1
-
-	hosts := make([]net.IP, 0, total)
+	hosts := make([]net.IP, 0, totalInt)
 	for value := start; value <= end; value++ {
 		if total > 2 && (value == start || value == end) {
 			continue
@@ -255,7 +252,7 @@ func ParseCIDRHosts(cidr string, maxHosts int) ([]net.IP, error) {
 	return hosts, nil
 }
 
-func ProbeHost(ctx context.Context, client *http.Client, scheme, host string, ports []int, paths []string, token string, timeout time.Duration) (bool, []*InnerMcpServer) {
+func ProbeHost(ctx context.Context, client *http.Client, scheme, host string, ports []int, paths []string, timeout time.Duration) (bool, []*InnerMcpServer) {
 	if !util.IsIntranetIp(host) {
 		return false, nil
 	}
@@ -274,7 +271,7 @@ func ProbeHost(ctx context.Context, client *http.Client, scheme, host string, po
 		isOnline = true
 
 		for _, path := range paths {
-			server, ok := probeMcpInitialize(ctx, client, scheme, host, port, path, token)
+			server, ok := probeMcpInitialize(ctx, client, scheme, host, port, path)
 			if ok {
 				servers = append(servers, server)
 			}
@@ -284,15 +281,12 @@ func ProbeHost(ctx context.Context, client *http.Client, scheme, host string, po
 	return isOnline, servers
 }
 
-func probeMcpInitialize(ctx context.Context, client *http.Client, scheme, host string, port int, path, token string) (*InnerMcpServer, bool) {
+func probeMcpInitialize(ctx context.Context, client *http.Client, scheme, host string, port int, path string) (*InnerMcpServer, bool) {
 	fullUrl := fmt.Sprintf("%s://%s%s", scheme, net.JoinHostPort(host, strconv.Itoa(port)), path)
 
 	httpReq, err := http.NewRequestWithContext(ctx, http.MethodPost, fullUrl, nil)
 	if err != nil {
 		return nil, false
-	}
-	if token != "" {
-		httpReq.Header.Set("Authorization", "Bearer "+token)
 	}
 
 	resp, err := client.Do(httpReq)

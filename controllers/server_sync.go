@@ -42,33 +42,22 @@ type SyncInnerServersRequest struct {
 	Scheme         string   `json:"scheme"`
 	Ports          []int    `json:"ports"`
 	Paths          []string `json:"paths"`
-	Token          string   `json:"token"`
 	TimeoutMs      int      `json:"timeoutMs"`
 	MaxConcurrency int      `json:"maxConcurrency"`
-}
-
-type SyncInnerMcpServer struct {
-	Host            string `json:"host"`
-	Port            int    `json:"port"`
-	Path            string `json:"path"`
-	Url             string `json:"url"`
-	ProtocolVersion string `json:"protocolVersion"`
-	ServerName      string `json:"serverName"`
-	ServerVersion   string `json:"serverVersion"`
 }
 
 type SyncInnerServersResult struct {
 	CIDR         []string              `json:"cidr"`
 	ScannedHosts int                   `json:"scannedHosts"`
 	OnlineHosts  []string              `json:"onlineHosts"`
-	Servers      []*SyncInnerMcpServer `json:"servers"`
+	Servers      []*mcp.InnerMcpServer `json:"servers"`
 }
 
 // SyncIntranetServers
 // @Title SyncIntranetServers
 // @Tag Server API
 // @Description scan intranet IP/CIDR targets and detect MCP servers by probing common ports and paths
-// @Param   body    body   controllers.SyncInnerServersRequest  true  "Scan request"
+// @Param   body    body   mcp.InnerMcpServer  true  "Scan request"
 // @Success 200 {object} controllers.Response The Response object
 // @router /sync-intranet-servers [post]
 func (c *ApiController) SyncIntranetServers() {
@@ -114,7 +103,7 @@ func (c *ApiController) SyncIntranetServers() {
 	defer cancel()
 
 	onlineHostSet := map[string]struct{}{}
-	serverMap := map[string]*SyncInnerMcpServer{}
+	serverMap := map[string]*mcp.InnerMcpServer{}
 	mutex := sync.Mutex{}
 	waitGroup := sync.WaitGroup{}
 	sem := make(chan struct{}, concurrency)
@@ -132,7 +121,7 @@ func (c *ApiController) SyncIntranetServers() {
 			}
 			defer func() { <-sem }()
 
-			isOnline, servers := mcp.ProbeHost(ctx, client, scheme, host, ports, paths, req.Token, timeout)
+			isOnline, servers := mcp.ProbeHost(ctx, client, scheme, host, ports, paths, timeout)
 			if !isOnline {
 				return
 			}
@@ -140,15 +129,7 @@ func (c *ApiController) SyncIntranetServers() {
 			mutex.Lock()
 			onlineHostSet[host] = struct{}{}
 			for _, server := range servers {
-				serverMap[server.Url] = &SyncInnerMcpServer{
-					Host:            server.Host,
-					Port:            server.Port,
-					Path:            server.Path,
-					Url:             server.Url,
-					ProtocolVersion: server.ProtocolVersion,
-					ServerName:      server.ServerName,
-					ServerVersion:   server.ServerVersion,
-				}
+				serverMap[server.Url] = server
 			}
 			mutex.Unlock()
 		}()
@@ -162,11 +143,11 @@ func (c *ApiController) SyncIntranetServers() {
 	}
 	slices.Sort(onlineHosts)
 
-	servers := make([]*SyncInnerMcpServer, 0, len(serverMap))
+	servers := make([]*mcp.InnerMcpServer, 0, len(serverMap))
 	for _, server := range serverMap {
 		servers = append(servers, server)
 	}
-	slices.SortFunc(servers, func(a, b *SyncInnerMcpServer) int {
+	slices.SortFunc(servers, func(a, b *mcp.InnerMcpServer) int {
 		if a.Url < b.Url {
 			return -1
 		}

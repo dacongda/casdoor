@@ -156,11 +156,11 @@ class ServerListPage extends BaseListPage {
       .filter(item => item !== "");
 
     if (cidr.length === 0) {
-      Setting.showMessage("error", "Please select at least one IP range");
+      Setting.showMessage("error", i18next.t("server:Please select at least one IP range"));
       return;
     }
     if (ports.length === 0) {
-      Setting.showMessage("error", "Please select at least one port");
+      Setting.showMessage("error", i18next.t("server:Please select at least one port"));
       return;
     }
 

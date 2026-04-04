@@ -32,9 +32,11 @@ class ServerListPage extends BaseListPage {
       scanResult: null,
       scanServers: [],
       showScanModal: false,
-      scanCidrs: ["127.0.0.1/32"],
-      scanPorts: ["1-65535"],
-      scanPaths: ["/", "/mcp", "/sse", "/mcp/sse"],
+      scanFilters: {
+        cidrs: ["127.0.0.1/32"],
+        ports: ["1-65535"],
+        paths: ["/", "/mcp", "/sse", "/mcp/sse"],
+      },
     };
   }
 
@@ -146,13 +148,13 @@ class ServerListPage extends BaseListPage {
   };
 
   submitScan = () => {
-    const cidr = this.state.scanCidrs
+    const cidr = this.state.scanFilters.cidrs
       .map(item => item.trim())
       .filter(item => item !== "");
-    const ports = this.state.scanPorts
+    const ports = this.state.scanFilters.ports
       .map(item => `${item}`.trim())
       .filter(item => item !== "");
-    const paths = this.state.scanPaths
+    const paths = this.state.scanFilters.paths
       .map(item => item.trim())
       .filter(item => item !== "");
 
@@ -321,16 +323,12 @@ class ServerListPage extends BaseListPage {
         <ScanServerModal
           open={this.state.showScanModal}
           loading={this.state.scanLoading}
-          scanCidrs={this.state.scanCidrs}
-          scanPorts={this.state.scanPorts}
-          scanPaths={this.state.scanPaths}
+          scanFilters={this.state.scanFilters}
           scanResult={this.state.scanResult}
           scanServers={this.state.scanServers}
           onSubmit={this.submitScan}
           onCancel={this.closeScanModal}
-          onChangeCidrs={(value) => this.setState({scanCidrs: value})}
-          onChangePorts={(value) => this.setState({scanPorts: value})}
-          onChangePaths={(value) => this.setState({scanPaths: value})}
+          onChangeScanFilters={(patch) => this.setState(prevState => ({scanFilters: {...prevState.scanFilters, ...patch}}))}
           onAddScannedServer={this.addScannedServer}
         />
       </>

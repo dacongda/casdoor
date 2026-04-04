@@ -104,9 +104,9 @@ const ScanServerModal = (props) => {
       <Select
         mode="tags"
         style={{width: "100%"}}
-        value={props.scanCidrs}
+        value={props.scanFilters.cidrs}
         options={scanCidrOptions}
-        onChange={props.onChangeCidrs}
+        onChange={(value) => props.onChangeScanFilters({cidrs: value})}
         placeholder="Select or input CIDR/IP"
       />
 
@@ -114,9 +114,9 @@ const ScanServerModal = (props) => {
       <Select
         mode="tags"
         style={{width: "100%"}}
-        value={props.scanPorts}
+        value={props.scanFilters.ports}
         options={scanPortOptions}
-        onChange={props.onChangePorts}
+        onChange={(value) => props.onChangeScanFilters({ports: value})}
         placeholder="Select or input ports"
       />
 
@@ -124,9 +124,9 @@ const ScanServerModal = (props) => {
       <Select
         mode="tags"
         style={{width: "100%"}}
-        value={props.scanPaths}
+        value={props.scanFilters.paths}
         options={scanPathOptions}
-        onChange={props.onChangePaths}
+        onChange={(value) => props.onChangeScanFilters({paths: value})}
         placeholder="Select or input paths"
       />
 

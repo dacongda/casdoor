@@ -32,7 +32,7 @@ class ServerListPage extends BaseListPage {
       scanServers: [],
       showScanModal: false,
       scanCidrs: ["127.0.0.1/32"],
-      scanPorts: [3000, 8080, 80],
+      scanPorts: ["1-65535"],
       scanPaths: ["/", "/mcp", "/sse", "/mcp/sse"],
     };
   }
@@ -149,8 +149,8 @@ class ServerListPage extends BaseListPage {
       .map(item => item.trim())
       .filter(item => item !== "");
     const ports = this.state.scanPorts
-      .map(item => Number(item))
-      .filter(item => Number.isInteger(item) && item > 0 && item <= 65535);
+      .map(item => `${item}`.trim())
+      .filter(item => item !== "");
     const paths = this.state.scanPaths
       .map(item => item.trim())
       .filter(item => item !== "");
@@ -161,6 +161,12 @@ class ServerListPage extends BaseListPage {
     }
     if (ports.length === 0) {
       Setting.showMessage("error", i18next.t("server:Please select at least one port"));
+      return;
+    }
+
+    const invalidPort = ports.find(item => !/^\d+$|^\d+\s*-\s*\d+$/.test(item));
+    if (invalidPort !== undefined) {
+      Setting.showMessage("error", `Invalid port expression: ${invalidPort}`);
       return;
     }
 
@@ -345,10 +351,11 @@ class ServerListPage extends BaseListPage {
       {label: "192.168.1.0/24", value: "192.168.1.0/24"},
     ];
     const scanPortOptions = [
-      {label: "80", value: 80},
-      {label: "443", value: 443},
-      {label: "3000", value: 3000},
-      {label: "8080", value: 8080},
+      {label: "1-65535", value: "1-65535"},
+      {label: "80", value: "80"},
+      {label: "443", value: "443"},
+      {label: "3000", value: "3000"},
+      {label: "8080", value: "8080"},
     ];
     const scanPathOptions = [
       {label: "/", value: "/"},

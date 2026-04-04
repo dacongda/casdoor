@@ -40,7 +40,7 @@ var (
 type SyncInnerServersRequest struct {
 	CIDR           []string `json:"cidr"`
 	Scheme         string   `json:"scheme"`
-	Ports          []int    `json:"ports"`
+	Ports          []string `json:"ports"`
 	Paths          []string `json:"paths"`
 	TimeoutMs      int      `json:"timeoutMs"`
 	MaxConcurrency int      `json:"maxConcurrency"`

@@ -91,14 +91,61 @@ func SanitizeConcurrency(maxConcurrency int, defaultConcurrency int, maxAllowed 
 	return maxConcurrency
 }
 
-func SanitizePorts(ports []int, defaultPorts []int) []int {
-	if len(ports) == 0 {
+func SanitizePorts(portInputs []string, defaultPorts []int) []int {
+	if len(portInputs) == 0 {
 		return append([]int{}, defaultPorts...)
 	}
 
 	portSet := map[int]struct{}{}
-	result := make([]int, 0, len(ports))
-	for _, port := range ports {
+	result := make([]int, 0, len(portInputs))
+	for _, portInput := range portInputs {
+		portInput = strings.TrimSpace(portInput)
+		if portInput == "" {
+			continue
+		}
+
+		if strings.Contains(portInput, "-") {
+			parts := strings.SplitN(portInput, "-", 2)
+			if len(parts) != 2 {
+				continue
+			}
+
+			start, err := strconv.Atoi(strings.TrimSpace(parts[0]))
+			if err != nil {
+				continue
+			}
+			end, err := strconv.Atoi(strings.TrimSpace(parts[1]))
+			if err != nil {
+				continue
+			}
+			if start > end {
+				continue
+			}
+
+			if start < 1 {
+				start = 1
+			}
+			if end > 65535 {
+				end = 65535
+			}
+			if start > end {
+				continue
+			}
+
+			for port := start; port <= end; port++ {
+				if _, ok := portSet[port]; ok {
+					continue
+				}
+				portSet[port] = struct{}{}
+				result = append(result, port)
+			}
+			continue
+		}
+
+		port, err := strconv.Atoi(portInput)
+		if err != nil {
+			continue
+		}
 		if port <= 0 || port > 65535 {
 			continue
 		}

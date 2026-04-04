@@ -64,14 +64,14 @@ type SyncInnerServersResult struct {
 	Servers      []*SyncInnerMcpServer `json:"servers"`
 }
 
-// SyncInnerServers
-// @Title SyncInnerServers
+// SyncIntranetServers
+// @Title SyncIntranetServers
 // @Tag Server API
 // @Description scan intranet IP/CIDR targets and detect MCP servers by probing common ports and paths
 // @Param   body    body   controllers.SyncInnerServersRequest  true  "Scan request"
 // @Success 200 {object} controllers.Response The Response object
-// @router /sync-inner-servers [post]
-func (c *ApiController) SyncInnerServers() {
+// @router /sync-intranet-servers [post]
+func (c *ApiController) SyncIntranetServers() {
 	_, ok := c.RequireAdmin()
 	if !ok {
 		return
@@ -182,4 +182,8 @@ func (c *ApiController) SyncInnerServers() {
 		OnlineHosts:  onlineHosts,
 		Servers:      servers,
 	})
+}
+
+func (c *ApiController) SyncInnerServers() {
+	c.SyncIntranetServers()
 }

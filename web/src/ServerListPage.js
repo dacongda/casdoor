@@ -113,9 +113,9 @@ class ServerListPage extends BaseListPage {
       });
   };
 
-  scanInnerServers = (scanRequest) => {
+  scanIntranetServers = (scanRequest) => {
     this.setState({scanLoading: true});
-    ServerBackend.syncInnerServers(scanRequest)
+    ServerBackend.syncIntranetServers(scanRequest)
       .then((res) => {
         this.setState({scanLoading: false});
         if (res.status === "ok") {
@@ -164,7 +164,7 @@ class ServerListPage extends BaseListPage {
       return;
     }
 
-    this.scanInnerServers({cidr: cidr, ports: ports, paths: paths});
+    this.scanIntranetServers({cidr: cidr, ports: ports, paths: paths});
   };
 
   addScannedServer = (scanServer) => {

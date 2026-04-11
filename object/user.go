@@ -850,7 +850,7 @@ func UpdateUser(id string, user *User, columns []string, isAdmin bool) (bool, er
 	}
 
 	if name != user.Name {
-		err := userChangeTrigger(name, user.Name)
+		err := userChangeTrigger(owner, name, user.Name)
 		if err != nil {
 			return false, err
 		}
@@ -948,7 +948,7 @@ func UpdateUserForAllFields(id string, user *User) (bool, error) {
 	}
 
 	if name != user.Name {
-		err := userChangeTrigger(name, user.Name)
+		err := userChangeTrigger(owner, name, user.Name)
 		if err != nil {
 			return false, err
 		}
@@ -1203,6 +1203,11 @@ func DeleteUser(user *User) (bool, error) {
 		return false, err
 	}
 
+	_, err = DeleteThirdPartyLinksByUser(user.Owner, user.Name)
+	if err != nil {
+		return false, err
+	}
+
 	organization, err := GetOrganizationByUser(user)
 	if err != nil {
 		return false, err
@@ -1347,7 +1352,7 @@ func DeleteGroupForUser(user string, group string) (bool, error) {
 	return userEnforcer.DeleteGroupForUser(user, group)
 }
 
-func userChangeTrigger(oldName string, newName string) error {
+func userChangeTrigger(owner string, oldName string, newName string) error {
 	session := ormer.Engine.NewSession()
 	defer session.Close()
 
@@ -1408,6 +1413,11 @@ func userChangeTrigger(oldName string, newName string) error {
 	resource := new(Resource)
 	resource.User = newName
 	_, err = session.Where("user=?", oldName).Update(resource)
+	if err != nil {
+		return err
+	}
+
+	_, err = session.Where("owner = ? AND user_name = ?", owner, oldName).Cols("user_name").Update(&ThirdPartyLink{UserName: newName})
 	if err != nil {
 		return err
 	}

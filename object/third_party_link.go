@@ -100,3 +100,12 @@ func DeleteThirdPartyLink(owner string, userName string, providerName string) (b
 	}
 	return affected != 0, nil
 }
+
+func DeleteThirdPartyLinksByUser(owner string, userName string) (bool, error) {
+	affected, err := ormer.Engine.Where("owner = ? AND user_name = ?", owner, userName).Delete(&ThirdPartyLink{})
+	if err != nil {
+		return false, err
+	}
+
+	return affected != 0, nil
+}

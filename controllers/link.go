@@ -44,6 +44,7 @@ func (c *ApiController) Unlink() {
 		return
 	}
 	providerType := form.ProviderType
+	providerName := form.ProviderName
 
 	// the user will be unlinked from the provider
 	unlinkedUser := form.User
@@ -71,11 +72,26 @@ func (c *ApiController) Unlink() {
 			return
 		}
 
-		provider := application.GetProviderItemByType(providerType)
+		provider := application.GetProviderItem(providerName)
 		if provider == nil {
-			c.ResponseError(c.T("link:This application has no providers of type") + providerType)
+			provider = application.GetProviderItemByType(providerType)
+		}
+		if provider == nil {
+			if providerName != "" {
+				c.ResponseError(c.T("link:This application has no provider named") + providerName)
+			} else {
+				c.ResponseError(c.T("link:This application has no providers of type") + providerType)
+			}
 			return
 		}
+
+		if provider.Provider == nil {
+			c.ResponseError(c.T("link:This application has no providers"))
+			return
+		}
+
+		providerType = provider.Provider.Type
+		providerName = provider.Name
 
 		if !provider.CanUnlink {
 			c.ResponseError(c.T("link:This provider can't be unlinked"))
@@ -89,7 +105,6 @@ func (c *ApiController) Unlink() {
 	// 2. the user is unlinking themselves and provider can be unlinked
 
 	if object.IsFlexibleCustomProvider(providerType) {
-		providerName := form.ProviderName
 		if providerName == "" {
 			c.ResponseError(c.T("link:Provider name is required for Flexible Custom providers"))
 			return

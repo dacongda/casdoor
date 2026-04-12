@@ -73,7 +73,7 @@ func (c *ApiController) Unlink() {
 		}
 
 		provider := application.GetProviderItem(providerName)
-		if provider == nil {
+		if provider == nil && providerType != "Flexible Custom" {
 			provider = application.GetProviderItemByType(providerType)
 		}
 		if provider == nil {

@@ -17,28 +17,6 @@ import {Button, Modal, Select, Table} from "antd";
 import i18next from "i18next";
 import * as Setting from "../../Setting";
 
-const scanCidrOptions = [
-  {label: "127.0.0.1/32", value: "127.0.0.1/32"},
-  {label: "10.0.0.0/24", value: "10.0.0.0/24"},
-  {label: "172.16.0.0/24", value: "172.16.0.0/24"},
-  {label: "192.168.1.0/24", value: "192.168.1.0/24"},
-];
-
-const scanPortOptions = [
-  {label: "1-65535", value: "1-65535"},
-  {label: "80", value: "80"},
-  {label: "443", value: "443"},
-  {label: "3000", value: "3000"},
-  {label: "8080", value: "8080"},
-];
-
-const scanPathOptions = [
-  {label: "/", value: "/"},
-  {label: "/mcp", value: "/mcp"},
-  {label: "/sse", value: "/sse"},
-  {label: "/mcp/sse", value: "/mcp/sse"},
-];
-
 const ScanServerModal = (props) => {
   const scanColumns = [
     {
@@ -100,34 +78,14 @@ const ScanServerModal = (props) => {
       onCancel={props.onCancel}
       okText={i18next.t("general:Sync")}
     >
-      <div style={{marginBottom: "12px"}}>IP range</div>
       <Select
-        mode="tags"
         style={{width: "100%"}}
-        value={props.scanFilters.cidrs}
-        options={scanCidrOptions}
-        onChange={(value) => props.onChangeScanFilters({cidrs: value})}
-        placeholder="Select or input CIDR/IP"
-      />
-
-      <div style={{marginTop: "16px", marginBottom: "12px"}}>Ports</div>
-      <Select
-        mode="tags"
-        style={{width: "100%"}}
-        value={props.scanFilters.ports}
-        options={scanPortOptions}
-        onChange={(value) => props.onChangeScanFilters({ports: value})}
-        placeholder="Select or input ports"
-      />
-
-      <div style={{marginTop: "16px", marginBottom: "12px"}}>Paths</div>
-      <Select
-        mode="tags"
-        style={{width: "100%"}}
-        value={props.scanFilters.paths}
-        options={scanPathOptions}
-        onChange={(value) => props.onChangeScanFilters({paths: value})}
-        placeholder="Select or input paths"
+        value={props.selectedScanProvider}
+        onChange={props.onChangeSelectedProvider}
+        options={props.scanProviders.map(provider => ({
+          label: `${provider.displayName || provider.name}`,
+          value: `${provider.owner}/${provider.name}`,
+        }))}
       />
 
       {props.scanResult !== null ? (

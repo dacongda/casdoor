@@ -137,7 +137,6 @@ export function renderScanProviderFields(provider, updateProviderField, options 
           <Button type="primary" loading={options.scanLoading} disabled={!canScan} onClick={options.onScan}>
             {i18next.t("server:Scan server")}
           </Button>
-          {!canScan ? <span style={{marginLeft: "12px", color: "#999"}}>Save provider first to scan</span> : null}
         </Col>
       </Row>
       {options.scanResult !== null ? (

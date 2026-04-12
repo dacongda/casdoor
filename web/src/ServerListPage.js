@@ -170,15 +170,11 @@ class ServerListPage extends BaseListPage {
 
   submitScan = () => {
     if (!this.state.selectedScanProvider) {
-      Setting.showMessage("error", "Please select a provider");
+      Setting.showMessage("error", i18next.t("server:Please select a provider"));
       return;
     }
 
     const [providerOwner, providerName] = this.state.selectedScanProvider.split("/");
-    if (!providerOwner || !providerName) {
-      Setting.showMessage("error", "Invalid provider");
-      return;
-    }
 
     this.scanIntranetServers(providerOwner, providerName);
   };

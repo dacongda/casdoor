@@ -61,6 +61,10 @@ type SyncInnerServersResult struct {
 
 type IntranetServerProvider struct{}
 
+func NewIntranetServerProvider() *IntranetServerProvider {
+	return &IntranetServerProvider{}
+}
+
 func (p *IntranetServerProvider) Scan(target string, command string) (string, error) {
 	req, err := parseIntranetScanRequest(target, command)
 	if err != nil {

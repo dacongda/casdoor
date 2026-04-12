@@ -14,8 +14,27 @@
 
 package scan
 
+import (
+	"fmt"
+
+	"github.com/casdoor/casdoor/object"
+)
+
 type ScanProvider interface {
 	Scan(target string, command string) (string, error)
 	ParseResult(rawResult string) (string, error)
 	GetResultSummary(result string) string
+}
+
+func GetScanProviderFromProvider(provider *object.Provider) (ScanProvider, error) {
+	if provider == nil {
+		return nil, fmt.Errorf("provider is nil")
+	}
+
+	switch {
+	case provider.Type == McpScanProviderType && provider.SubType == IntranetScanProviderSubType:
+		return NewIntranetServerProvider(), nil
+	}
+
+	return nil, fmt.Errorf("scan provider type: %s (sub type: %s) is not supported", provider.Type, provider.SubType)
 }

@@ -55,12 +55,12 @@ func (c *ApiController) SyncIntranetServers() {
 		return
 	}
 
-	if configuredProvider.Category != scan.ScanProviderCategory || configuredProvider.Type != scan.McpScanProviderType || configuredProvider.SubType != scan.IntranetScanProviderSubType {
-		c.ResponseError("provider is not a MCP Intranet Scan provider")
+	provider, err := scan.GetScanProviderFromProvider(configuredProvider)
+	if err != nil {
+		c.ResponseError(err.Error())
 		return
 	}
 
-	provider := &scan.IntranetServerProvider{}
 	commandBytes, err := json.Marshal(&scan.SyncInnerServersRequest{
 		CIDR:  strings.Split(configuredProvider.Scopes, ","),
 		Ports: strings.Split(configuredProvider.Content, ","),

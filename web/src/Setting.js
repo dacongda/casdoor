@@ -15,7 +15,7 @@
 import React from "react";
 import {Link} from "react-router-dom";
 import {Button, Select, Tag, Tooltip, message, theme} from "antd";
-import {QuestionCircleTwoTone} from "@ant-design/icons";
+import {QuestionCircleOutlined} from "@ant-design/icons";
 import {isMobile as isMobileDevice} from "react-device-detect";
 import "./i18n";
 import i18next from "i18next";
@@ -32,7 +32,7 @@ const {Option} = Select;
 
 export const ServerUrl = "";
 
-export const StaticBaseUrl = "https://cdn.casbin.org";
+export const StaticBaseUrl = Conf.StaticBaseUrl;
 
 export const MAX_PAGE_SIZE = 25;
 export const SEARCH_DEBOUNCE_MS = 300;
@@ -455,6 +455,24 @@ export const OtherProviderInfo = {
       url: "https://www.aliyun.com/product/idverification",
     },
   },
+  Log: {
+    "Casdoor Permission Log": {
+      logo: `${StaticBaseUrl}/img/social_default.png`,
+      url: "https://casdoor.org",
+    },
+    "System Log": {
+      logo: `${StaticBaseUrl}/img/social_default.png`,
+      url: "https://en.wikipedia.org/wiki/Syslog",
+    },
+    "Agent": {
+      logo: `${StaticBaseUrl}/img/social_default.png`,
+      url: "",
+    },
+    "SELinux Log": {
+      logo: `${StaticBaseUrl}/img/social_default.png`,
+      url: "https://github.com/SELinuxProject/selinux",
+    },
+  },
 };
 
 export const UserFields = ["owner", "name", "password", "display_name", "id", "type", "email", "phone", "country_code",
@@ -462,7 +480,7 @@ export const UserFields = ["owner", "name", "password", "display_name", "id", "t
   "avatar_type", "permanent_avatar", "email_verified", "region", "location", "address",
   "affiliation", "title", "id_card_type", "id_card", "real_name", "is_verified", "bio", "tag", "language",
   "education", "score", "karma", "ranking", "balance", "balance_credit", "balance_currency", "currency", "is_default_avatar", "is_online",
-  "is_forbidden", "is_deleted", "signup_application", "register_type", "register_source", "hash", "pre_hash", "access_key", "access_secret", "access_token",
+  "is_forbidden", "is_deleted", "signup_application", "register_type", "register_source", "hash", "pre_hash", "access_token",
   "created_ip", "last_signin_time", "last_signin_ip", "github", "google", "qq", "wechat", "facebook", "dingtalk",
   "weibo", "gitee", "linkedin", "wecom", "lark", "gitlab", "adfs", "baidu", "alipay", "casdoor", "infoflow", "apple",
   "azuread", "azureadb2c", "slack", "steam", "bilibili", "okta", "douyin", "kwai", "line", "amazon", "auth0",
@@ -514,7 +532,7 @@ export const GetTranslatedUserItems = () => {
     {name: "ID verification", label: i18next.t("user:ID verification")},
     {name: "Homepage", label: i18next.t("user:Homepage")},
     {name: "Bio", label: i18next.t("user:Bio")},
-    {name: "Tag", label: i18next.t("user:Tag")},
+    {name: "Tag", label: i18next.t("general:Tag")},
     {name: "Language", label: i18next.t("user:Language")},
     {name: "Gender", label: i18next.t("user:Gender")},
     {name: "Birthday", label: i18next.t("user:Birthday")},
@@ -696,6 +714,10 @@ export function initServerUrl() {
 export function isLocalhost() {
   const hostname = window.location.hostname;
   return hostname === "localhost";
+}
+
+export function initWebConfig() {
+  Conf.initConfigFromCookie();
 }
 
 export function getFullServerUrl() {
@@ -1417,6 +1439,13 @@ export function getProviderTypeOptions(category) {
       {id: "Jumio", name: "Jumio"},
       {id: "Alibaba Cloud", name: "Alibaba Cloud"},
     ]);
+  } else if (category === "Log") {
+    return ([
+      {id: "Casdoor Permission Log", name: "Casdoor Permission Log"},
+      {id: "System Log", name: "System Log"},
+      {id: "Agent", name: "Agent"},
+      {id: "SELinux Log", name: "SELinux Log"},
+    ]);
   } else {
     return [];
   }
@@ -1460,6 +1489,43 @@ function isSigninMethodEnabled(application, signinMethod) {
   } else {
     return false;
   }
+}
+
+export const CaptchaRule = {
+  Always: "Always",
+  Never: "Never",
+  Dynamic: "Dynamic",
+  InternetOnly: "Internet-Only",
+};
+
+export function getCaptchaProviderItems(application) {
+  const providers = application?.providers;
+  if (!providers) {
+    return [];
+  }
+
+  return providers.filter(providerItem => providerItem?.provider?.category === "Captcha");
+}
+
+export function getCaptchaRule(application) {
+  const captchaProviderItems = getCaptchaProviderItems(application);
+  if (captchaProviderItems.some(providerItem => providerItem.rule === CaptchaRule.Always)) {
+    return CaptchaRule.Always;
+  } else if (captchaProviderItems.some(providerItem => providerItem.rule === CaptchaRule.Dynamic)) {
+    return CaptchaRule.Dynamic;
+  } else if (captchaProviderItems.some(providerItem => providerItem.rule === CaptchaRule.InternetOnly)) {
+    return CaptchaRule.InternetOnly;
+  }
+
+  return CaptchaRule.Never;
+}
+
+export function isInlineCaptchaEnabled(application) {
+  return application?.signinItems?.some(signinItem => signinItem.name === "Captcha" && signinItem.rule === "inline") || false;
+}
+
+export function isCaptchaEnabled(application) {
+  return getCaptchaRule(application) !== CaptchaRule.Never;
 }
 
 export function isPasswordEnabled(application) {
@@ -1514,7 +1580,7 @@ function renderLink(url, text, onClick) {
 
   if (url.startsWith("/")) {
     return (
-      <Link style={{float: "right"}} to={url} onClick={() => {
+      <Link className="login-link" style={{float: "right"}} to={url} onClick={() => {
         if (onClick !== null) {
           onClick();
         }
@@ -1522,7 +1588,7 @@ function renderLink(url, text, onClick) {
     );
   } else if (url.startsWith("http")) {
     return (
-      <a style={{float: "right"}} href={url} onClick={() => {
+      <a className="login-link" style={{float: "right"}} href={url} onClick={() => {
         if (onClick !== null) {
           onClick();
         }
@@ -1602,7 +1668,7 @@ export function getLabel(text, tooltip) {
     <React.Fragment>
       <span style={{marginRight: 4}}>{text}</span>
       <Tooltip placement="top" title={tooltip}>
-        <QuestionCircleTwoTone twoToneColor="rgb(45,120,213)" />
+        <QuestionCircleOutlined style={{color: "var(--ant-color-primary)"}} />
       </Tooltip>
     </React.Fragment>
   );
@@ -2359,7 +2425,7 @@ export function getApiPaths() {
       res.push("place-order", "cancel-order", "pay-order");
     }
     if (obj === "user") {
-      res.push("add-user-keys", "remove-user-from-group", "upload-users");
+      res.push("remove-user-from-group", "upload-users");
       res.push("check-user-password", "set-password", "reset-email-or-phone");
       res.push("verify-identification");
     }

@@ -200,16 +200,25 @@ func (l *LdapConn) GetLdapUsers(ldapServer *Ldap) ([]LdapUser, error) {
 		SearchAttributes = append(SearchAttributes, attribute)
 	}
 
+	// Some LDAP servers/configs use "{}" as a placeholder (e.g. "(uid={})").
+	// Casdoor doesn't interpolate it. For listing users, interpret it as a wildcard.
+	filter := strings.TrimSpace(ldapServer.Filter)
+	if filter == "" {
+		filter = "(objectClass=*)"
+	} else if strings.Contains(filter, "{}") {
+		filter = strings.ReplaceAll(filter, "{}", "*")
+	}
+
 	searchReq := goldap.NewSearchRequest(ldapServer.BaseDn, goldap.ScopeWholeSubtree, goldap.NeverDerefAliases,
 		0, 0, false,
-		ldapServer.Filter, SearchAttributes, nil)
+		filter, SearchAttributes, nil)
 	searchResult, err := l.Conn.SearchWithPaging(searchReq, 100)
 	if err != nil {
 		return nil, err
 	}
 
 	if len(searchResult.Entries) == 0 {
-		return nil, errors.New("no result")
+		return []LdapUser{}, nil
 	}
 
 	var ldapUsers []LdapUser
@@ -453,20 +462,20 @@ func SyncLdapUsers(owner string, syncUsers []LdapUser, ldapId string) (existUser
 	}
 	tag := strings.Join(ou, ".")
 
-	for _, syncUser := range syncUsers {
-		existUuids, err := GetExistUuids(owner, uuids)
-		if err != nil {
-			return nil, nil, err
-		}
+	existUuids, err := GetExistUuids(owner, uuids)
+	if err != nil {
+		return nil, nil, err
+	}
 
-		found := false
-		if len(existUuids) > 0 {
-			for _, existUuid := range existUuids {
-				if syncUser.Uuid == existUuid {
-					existUsers = append(existUsers, syncUser)
-					found = true
-				}
-			}
+	existUuidSet := make(map[string]struct{}, len(existUuids))
+	for _, uuid := range existUuids {
+		existUuidSet[uuid] = struct{}{}
+	}
+
+	for _, syncUser := range syncUsers {
+		_, found := existUuidSet[syncUser.Uuid]
+		if found {
+			existUsers = append(existUsers, syncUser)
 		}
 
 		if !found {
@@ -713,11 +722,23 @@ func dnToGroupName(owner, dn string) string {
 func GetExistUuids(owner string, uuids []string) ([]string, error) {
 	var existUuids []string
 
+	// PostgreSQL only supports up to 65535 parameters per query, so we batch the uuids
+	const batchSize = 100
 	tableNamePrefix := conf.GetConfigString("tableNamePrefix")
-	err := ormer.Engine.Table(tableNamePrefix+"user").Where("owner = ?", owner).Cols("ldap").
-		In("ldap", uuids).Select("DISTINCT ldap").Find(&existUuids)
-	if err != nil {
-		return existUuids, err
+	for i := 0; i < len(uuids); i += batchSize {
+		end := i + batchSize
+		if end > len(uuids) {
+			end = len(uuids)
+		}
+		batch := uuids[i:end]
+
+		var batchUuids []string
+		err := ormer.Engine.Table(tableNamePrefix+"user").Where("owner = ?", owner).Cols("ldap").
+			In("ldap", batch).Select("DISTINCT ldap").Find(&batchUuids)
+		if err != nil {
+			return existUuids, err
+		}
+		existUuids = append(existUuids, batchUuids...)
 	}
 
 	return existUuids, nil
@@ -750,7 +771,7 @@ func ResetLdapPassword(user *User, oldPassword string, newPassword string, lang 
 		}
 		if len(searchResult.Entries) > 1 {
 			conn.Close()
-			return fmt.Errorf(i18n.Translate(lang, "check:Multiple accounts with same uid, please check your ldap server"))
+			return errors.New(i18n.Translate(lang, "check:Multiple accounts with same uid, please check your ldap server"))
 		}
 
 		userDn := searchResult.Entries[0].DN
@@ -847,13 +868,22 @@ func (ldapUser *LdapUser) GetLdapUuid() string {
 }
 
 func (ldap *Ldap) buildAuthFilterString(user *User) string {
-	if len(ldap.FilterFields) == 0 {
-		return fmt.Sprintf("(&%s(uid=%s))", ldap.Filter, user.Name)
+	// Tolerate configs that use "{}" as a placeholder, e.g. "(uid={})".
+	// Casdoor doesn't interpolate it; treat it as wildcard so the base filter remains valid.
+	baseFilter := strings.TrimSpace(ldap.Filter)
+	if baseFilter == "" {
+		baseFilter = "(objectClass=*)"
+	} else if strings.Contains(baseFilter, "{}") {
+		baseFilter = strings.ReplaceAll(baseFilter, "{}", "*")
 	}
 
-	filter := fmt.Sprintf("(&%s(|", ldap.Filter)
+	if len(ldap.FilterFields) == 0 {
+		return fmt.Sprintf("(&%s(uid=%s))", baseFilter, goldap.EscapeFilter(user.Name))
+	}
+
+	filter := fmt.Sprintf("(&%s(|", baseFilter)
 	for _, field := range ldap.FilterFields {
-		filter = fmt.Sprintf("%s(%s=%s)", filter, field, user.getFieldFromLdapAttribute(field))
+		filter = fmt.Sprintf("%s(%s=%s)", filter, field, goldap.EscapeFilter(user.getFieldFromLdapAttribute(field)))
 	}
 	filter = fmt.Sprintf("%s))", filter)
 

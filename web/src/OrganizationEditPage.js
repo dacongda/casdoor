@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import React from "react";
+import Loading from "./common/Loading";
 import {Button, Card, Col, Input, InputNumber, Popconfirm, Radio, Row, Select, Switch} from "antd";
 import * as OrganizationBackend from "./backend/OrganizationBackend";
 import * as ApplicationBackend from "./backend/ApplicationBackend";
@@ -634,6 +635,16 @@ class OrganizationEditPage extends React.Component {
           </Col>
         </Row>
         <Row style={{marginTop: "20px"}} >
+          <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 19 : 2}>
+            {Setting.getLabel(i18next.t("organization:Use permanent avatar"), i18next.t("organization:Use permanent avatar - Tooltip"))} :
+          </Col>
+          <Col span={1} >
+            <Switch checked={this.state.organization.usePermanentAvatar} onChange={checked => {
+              this.updateOrganizationField("usePermanentAvatar", checked);
+            }} />
+          </Col>
+        </Row>
+        <Row style={{marginTop: "20px"}} >
           <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
             {Setting.getLabel(i18next.t("organization:Admin navbar items"), i18next.t("organization:Admin navbar items - Tooltip"))} :
           </Col>
@@ -901,7 +912,7 @@ class OrganizationEditPage extends React.Component {
     return (
       <div>
         {
-          this.state.organization !== null ? this.renderOrganization() : null
+          this.state.organization !== null ? this.renderOrganization() : <Loading type="page" tip={i18next.t("login:Loading")} />
         }
         {this.state.mode !== "add" && this.state.transactions.length > 0 ? (
           <Card size="small" title={i18next.t("general:Transactions")} style={{marginTop: "20px"}} type="inner">

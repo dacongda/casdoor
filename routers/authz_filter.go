@@ -32,10 +32,8 @@ import (
 )
 
 type Object struct {
-	Owner        string `json:"owner"`
-	Name         string `json:"name"`
-	AccessKey    string `json:"accessKey"`
-	AccessSecret string `json:"accessSecret"`
+	Owner string `json:"owner"`
+	Name  string `json:"name"`
 }
 
 type ObjectWithOrg struct {
@@ -47,10 +45,6 @@ func getUsername(ctx *context.Context) (username string) {
 	username, ok := ctx.Input.Session("username").(string)
 	if !ok || username == "" {
 		username, _ = getUsernameByClientIdSecret(ctx)
-	}
-
-	if username == "" {
-		username, _ = getUsernameByKeys(ctx)
 	}
 
 	session := ctx.Input.Session("SessionData")
@@ -105,6 +99,10 @@ func getObject(ctx *context.Context) (string, string, error) {
 		return getMcpObject(ctx)
 	}
 
+	if strings.HasPrefix(path, "/api/server/") {
+		return ctx.Input.Param(":owner"), ctx.Input.Param(":name"), nil
+	}
+
 	if method == http.MethodGet {
 		if ctx.Request.URL.Path == "/api/get-policies" {
 			if ctx.Input.Query("id") == "/" {
@@ -143,6 +141,19 @@ func getObject(ctx *context.Context) (string, string, error) {
 			}
 		}
 
+		// For non-GET requests, if the `id` query param is present it is the
+		// authoritative identifier of the object being operated on.  Use it
+		// instead of the request body so that an attacker cannot spoof the
+		// object owner by injecting "owner":"admin" (or any other value) into
+		// the request body while pointing the URL at a different organization's
+		// resource.
+		if id := ctx.Input.Query("id"); id != "" {
+			owner, name, err := util.GetOwnerAndNameFromIdWithError(id)
+			if err == nil {
+				return owner, name, nil
+			}
+		}
+
 		body := ctx.Input.RequestBody
 		if len(body) == 0 {
 			return ctx.Request.Form.Get("owner"), ctx.Request.Form.Get("name"), nil
@@ -178,30 +189,6 @@ func getObject(ctx *context.Context) (string, string, error) {
 		}
 
 		return obj.Owner, obj.Name, nil
-	}
-}
-
-func getKeys(ctx *context.Context) (string, string) {
-	method := ctx.Request.Method
-
-	if method == http.MethodGet {
-		accessKey := ctx.Input.Query("accessKey")
-		accessSecret := ctx.Input.Query("accessSecret")
-		return accessKey, accessSecret
-	} else {
-		body := ctx.Input.RequestBody
-
-		if len(body) == 0 {
-			return ctx.Request.Form.Get("accessKey"), ctx.Request.Form.Get("accessSecret")
-		}
-
-		var obj Object
-		err := json.Unmarshal(body, &obj)
-		if err != nil {
-			return "", ""
-		}
-
-		return obj.AccessKey, obj.AccessSecret
 	}
 }
 
@@ -313,6 +300,12 @@ func ApiFilter(ctx *context.Context) {
 
 	isAllowed := authz.IsAllowed(subOwner, subName, method, urlPath, objOwner, objName, extraInfo)
 
+	if method != "GET" && !strings.HasSuffix(urlPath, "-entry") {
+		util.SafeGoroutine(func() {
+			writePermissionLog(objOwner, subOwner, subName, method, urlPath, isAllowed)
+		})
+	}
+
 	result := "deny"
 	if isAllowed {
 		result = "allow"
@@ -330,7 +323,7 @@ func ApiFilter(ctx *context.Context) {
 	}
 
 	if !isAllowed {
-		if urlPath == "/api/mcp" {
+		if urlPath == "/api/mcp" || strings.HasPrefix(urlPath, "/api/server/") {
 			denyMcpRequest(ctx)
 		} else {
 			denyRequest(ctx)
@@ -347,6 +340,34 @@ func ApiFilter(ctx *context.Context) {
 		util.SafeGoroutine(func() {
 			object.AddRecord(record)
 		})
+	}
+}
+
+func writePermissionLog(objOwner, subOwner, subName, method, urlPath string, allowed bool) {
+	providers, err := object.GetProvidersByCategory(objOwner, "Log")
+	if err != nil {
+		return
+	}
+
+	severity := "info"
+	if !allowed {
+		severity = "warning"
+	}
+	message := fmt.Sprintf("sub=%s/%s method=%s url=%s objOwner=%s allowed=%v", subOwner, subName, method, urlPath, objOwner, allowed)
+
+	for _, provider := range providers {
+		// System Log is a pull-based collector; it does not accept Write calls.
+		if provider.Type == "System Log" {
+			continue
+		}
+		if provider.State == "Disabled" {
+			continue
+		}
+		logProvider, err := object.GetLogProviderFromProvider(provider)
+		if err != nil {
+			continue
+		}
+		_ = logProvider.Write(severity, message)
 	}
 }
 

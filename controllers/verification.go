@@ -252,6 +252,10 @@ func (c *ApiController) SendVerificationCode() {
 		return
 	}
 
+	if vform.CaptchaToken != "" {
+		enableCaptcha = true
+	}
+
 	// Only verify CAPTCHA if it should be enabled
 	if enableCaptcha {
 		captchaProvider, err := object.GetCaptchaProviderByApplication(vform.ApplicationId, "false", c.GetAcceptLanguage())
@@ -440,6 +444,8 @@ func (c *ApiController) ResetEmailOrPhone() {
 		return
 	}
 
+	clientIp := util.GetClientIpFromRequest(c.Ctx.Request)
+
 	destType := c.Ctx.Request.Form.Get("type")
 	dest := c.Ctx.Request.Form.Get("dest")
 	code := c.Ctx.Request.Form.Get("code")
@@ -494,13 +500,9 @@ func (c *ApiController) ResetEmailOrPhone() {
 		}
 	}
 
-	result, err := object.CheckVerificationCode(checkDest, code, c.GetAcceptLanguage())
+	err = object.CheckVerifyCodeWithLimitAndIp(user, clientIp, checkDest, code, c.GetAcceptLanguage())
 	if err != nil {
-		c.ResponseError(c.T(err.Error()))
-		return
-	}
-	if result.Code != object.VerificationSuccess {
-		c.ResponseError(result.Msg)
+		c.ResponseError(err.Error())
 		return
 	}
 
@@ -598,13 +600,10 @@ func (c *ApiController) VerifyCode() {
 	}
 
 	if !passed {
-		result, err := object.CheckVerificationCode(checkDest, authForm.Code, c.GetAcceptLanguage())
+		clientIp := util.GetClientIpFromRequest(c.Ctx.Request)
+		err = object.CheckVerifyCodeWithLimitAndIp(user, clientIp, checkDest, authForm.Code, c.GetAcceptLanguage())
 		if err != nil {
 			c.ResponseError(err.Error())
-			return
-		}
-		if result.Code != object.VerificationSuccess {
-			c.ResponseError(result.Msg)
 			return
 		}
 

@@ -23,8 +23,6 @@ import (
 	"runtime"
 	"strings"
 
-	"github.com/casvisor/casvisor-go-sdk/casvisorsdk"
-
 	"github.com/beego/beego/v2/server/web"
 	"github.com/casdoor/casdoor/conf"
 	"github.com/casdoor/casdoor/util"
@@ -256,7 +254,11 @@ func (a *Ormer) open() error {
 		dataSourceName = a.dataSourceName
 	}
 
-	engine, err := xorm.NewEngine(a.driverName, dataSourceName)
+	driverName := a.driverName
+	if driverName == "sqlite3" {
+		driverName = "sqlite"
+	}
+	engine, err := xorm.NewEngine(driverName, dataSourceName)
 	if err != nil {
 		return err
 	}
@@ -280,7 +282,11 @@ func (a *Ormer) openFromDb(db *sql.DB) error {
 
 	xormDb := core.FromDB(db)
 
-	engine, err := xorm.NewEngineWithDB(a.driverName, dataSourceName, xormDb)
+	driverName := a.driverName
+	if driverName == "sqlite3" {
+		driverName = "sqlite"
+	}
+	engine, err := xorm.NewEngineWithDB(driverName, dataSourceName, xormDb)
 	if err != nil {
 		return err
 	}
@@ -341,6 +347,11 @@ func (a *Ormer) createTable() {
 	}
 
 	err = a.Engine.Sync2(new(Cert))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(Key))
 	if err != nil {
 		panic(err)
 	}
@@ -420,12 +431,17 @@ func (a *Ormer) createTable() {
 		panic(err)
 	}
 
-	err = a.Engine.Sync2(new(casvisorsdk.Record))
+	err = a.Engine.Sync2(new(Record))
 	if err != nil {
 		panic(err)
 	}
 
 	err = a.Engine.Sync2(new(Webhook))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(WebhookEvent))
 	if err != nil {
 		panic(err)
 	}
@@ -456,6 +472,21 @@ func (a *Ormer) createTable() {
 	}
 
 	err = a.Engine.Sync2(new(Ticket))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(Agent))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(Server))
+	if err != nil {
+		panic(err)
+	}
+
+	err = a.Engine.Sync2(new(Entry))
 	if err != nil {
 		panic(err)
 	}

@@ -26,7 +26,7 @@ package routers
 import (
 	"github.com/beego/beego/v2/server/web"
 	"github.com/casdoor/casdoor/controllers"
-	"github.com/casdoor/casdoor/mcp"
+	"github.com/casdoor/casdoor/mcpself"
 )
 
 func InitAPI() {
@@ -48,6 +48,9 @@ func InitAPI() {
 	web.Router("/api/login", &controllers.ApiController{}, "POST:Login")
 	web.Router("/api/get-app-login", &controllers.ApiController{}, "GET:GetApplicationLogin")
 	web.Router("/api/get-dashboard", &controllers.ApiController{}, "GET:GetDashboard")
+	web.Router("/api/get-dashboard-providers", &controllers.ApiController{}, "GET:GetDashboardProviderDistribution")
+	web.Router("/api/get-dashboard-mfa", &controllers.ApiController{}, "GET:GetDashboardMfaCoverage")
+	web.Router("/api/get-dashboard-heatmap", &controllers.ApiController{}, "GET:GetDashboardLoginHeatmap")
 	web.Router("/api/logout", &controllers.ApiController{}, "GET,POST:Logout")
 	web.Router("/api/sso-logout", &controllers.ApiController{}, "GET,POST:SsoLogout")
 	web.Router("/api/get-account", &controllers.ApiController{}, "GET:GetAccount")
@@ -87,7 +90,6 @@ func InitAPI() {
 	web.Router("/api/get-user-count", &controllers.ApiController{}, "GET:GetUserCount")
 	web.Router("/api/get-user", &controllers.ApiController{}, "GET:GetUser")
 	web.Router("/api/update-user", &controllers.ApiController{}, "POST:UpdateUser")
-	web.Router("/api/add-user-keys", &controllers.ApiController{}, "POST:AddUserKeys")
 	web.Router("/api/add-user", &controllers.ApiController{}, "POST:AddUser")
 	web.Router("/api/delete-user", &controllers.ApiController{}, "POST:DeleteUser")
 	web.Router("/api/upload-users", &controllers.ApiController{}, "POST:UploadUsers")
@@ -127,6 +129,34 @@ func InitAPI() {
 	web.Router("/api/delete-resource", &controllers.ApiController{}, "POST:DeleteResource")
 	web.Router("/api/upload-resource", &controllers.ApiController{}, "POST:UploadResource")
 
+	web.Router("/api/get-agents", &controllers.ApiController{}, "GET:GetAgents")
+	web.Router("/api/get-agent", &controllers.ApiController{}, "GET:GetAgent")
+	web.Router("/api/update-agent", &controllers.ApiController{}, "POST:UpdateAgent")
+	web.Router("/api/add-agent", &controllers.ApiController{}, "POST:AddAgent")
+	web.Router("/api/delete-agent", &controllers.ApiController{}, "POST:DeleteAgent")
+
+	web.Router("/api/get-servers", &controllers.ApiController{}, "GET:GetServers")
+	web.Router("/api/get-online-servers", &controllers.ApiController{}, "GET:GetOnlineServers")
+	web.Router("/api/sync-intranet-servers", &controllers.ApiController{}, "POST:SyncIntranetServers")
+	web.Router("/api/get-server", &controllers.ApiController{}, "GET:GetServer")
+	web.Router("/api/update-server", &controllers.ApiController{}, "POST:UpdateServer")
+	web.Router("/api/sync-mcp-tool", &controllers.ApiController{}, "POST:SyncMcpTool")
+	web.Router("/api/add-server", &controllers.ApiController{}, "POST:AddServer")
+	web.Router("/api/delete-server", &controllers.ApiController{}, "POST:DeleteServer")
+	web.Router("/api/server/:owner/:name", &controllers.ApiController{}, "GET:ProxyServer")
+	web.Router("/api/server/:owner/:name", &controllers.ApiController{}, "POST:ProxyServer")
+
+	web.Router("/api/get-entries", &controllers.ApiController{}, "GET:GetEntries")
+	web.Router("/api/get-entry", &controllers.ApiController{}, "GET:GetEntry")
+	web.Router("/api/get-openclaw-session-graph", &controllers.ApiController{}, "GET:GetOpenClawSessionGraph")
+	web.Router("/api/update-entry", &controllers.ApiController{}, "POST:UpdateEntry")
+	web.Router("/api/add-entry", &controllers.ApiController{}, "POST:AddEntry")
+	web.Router("/api/delete-entry", &controllers.ApiController{}, "POST:DeleteEntry")
+
+	web.Router("/api/v1/traces", &controllers.ApiController{}, "POST:AddOtlpTrace")
+	web.Router("/api/v1/metrics", &controllers.ApiController{}, "POST:AddOtlpMetrics")
+	web.Router("/api/v1/logs", &controllers.ApiController{}, "POST:AddOtlpLogs")
+
 	web.Router("/api/get-global-sites", &controllers.ApiController{}, "GET:GetGlobalSites")
 	web.Router("/api/get-sites", &controllers.ApiController{}, "GET:GetSites")
 	web.Router("/api/get-site", &controllers.ApiController{}, "GET:GetSite")
@@ -147,6 +177,13 @@ func InitAPI() {
 	web.Router("/api/add-cert", &controllers.ApiController{}, "POST:AddCert")
 	web.Router("/api/delete-cert", &controllers.ApiController{}, "POST:DeleteCert")
 	web.Router("/api/update-cert-domain-expire", &controllers.ApiController{}, "POST:UpdateCertDomainExpire")
+
+	web.Router("/api/get-keys", &controllers.ApiController{}, "GET:GetKeys")
+	web.Router("/api/get-global-keys", &controllers.ApiController{}, "GET:GetGlobalKeys")
+	web.Router("/api/get-key", &controllers.ApiController{}, "GET:GetKey")
+	web.Router("/api/update-key", &controllers.ApiController{}, "POST:UpdateKey")
+	web.Router("/api/add-key", &controllers.ApiController{}, "POST:AddKey")
+	web.Router("/api/delete-key", &controllers.ApiController{}, "POST:DeleteKey")
 
 	web.Router("/api/get-roles", &controllers.ApiController{}, "GET:GetRoles")
 	web.Router("/api/get-role", &controllers.ApiController{}, "GET:GetRole")
@@ -214,6 +251,7 @@ func InitAPI() {
 	web.Router("/api/update-product", &controllers.ApiController{}, "POST:UpdateProduct")
 	web.Router("/api/add-product", &controllers.ApiController{}, "POST:AddProduct")
 	web.Router("/api/delete-product", &controllers.ApiController{}, "POST:DeleteProduct")
+	web.Router("/api/buy-product", &controllers.ApiController{}, "POST:BuyProduct")
 
 	web.Router("/api/get-orders", &controllers.ApiController{}, "GET:GetOrders")
 	web.Router("/api/get-user-orders", &controllers.ApiController{}, "GET:GetUserOrders")
@@ -284,6 +322,12 @@ func InitAPI() {
 	web.Router("/api/update-webhook", &controllers.ApiController{}, "POST:UpdateWebhook")
 	web.Router("/api/add-webhook", &controllers.ApiController{}, "POST:AddWebhook")
 	web.Router("/api/delete-webhook", &controllers.ApiController{}, "POST:DeleteWebhook")
+
+	// Webhook event routes
+	web.Router("/api/get-webhook-events", &controllers.ApiController{}, "GET:GetWebhookEvents")
+	web.Router("/api/get-webhook-event-detail", &controllers.ApiController{}, "GET:GetWebhookEvent")
+	web.Router("/api/replay-webhook-event", &controllers.ApiController{}, "POST:ReplayWebhookEvent")
+	web.Router("/api/delete-webhook-event", &controllers.ApiController{}, "POST:DeleteWebhookEvent")
 
 	web.Router("/api/get-tickets", &controllers.ApiController{}, "GET:GetTickets")
 	web.Router("/api/get-ticket", &controllers.ApiController{}, "GET:GetTicket")
@@ -359,7 +403,7 @@ func InitAPI() {
 
 	web.Router("/scim/*", &controllers.RootController{}, "*:HandleScim")
 
-	web.Router("/api/mcp", &mcp.McpController{}, "POST:HandleMcp")
+	web.Router("/api/mcp", &mcpself.McpController{}, "POST:HandleMcp")
 
 	web.Router("/api/faceid-signin-begin", &controllers.ApiController{}, "GET:FaceIDSigninBegin")
 }

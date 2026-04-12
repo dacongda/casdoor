@@ -37,7 +37,6 @@ import (
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/proxy"
 	"github.com/casdoor/casdoor/util"
-	"github.com/google/uuid"
 	"golang.org/x/oauth2"
 )
 
@@ -873,12 +872,12 @@ func (c *ApiController) Login() {
 					return
 				}
 				if !reg.MatchString(userInfo.Email) {
-					c.ResponseError(fmt.Sprintf(c.T("check:Email is invalid")))
+					c.ResponseError(c.T("check:Email is invalid"))
 				}
 			}
 		}
 
-		if authForm.Method == "signup" {
+		if authForm.Method == "signup" || authForm.Method == "signin" {
 			user := &object.User{}
 			if provider.Category == "SAML" && !object.IsFlexibleCustomProvider(provider.Type) {
 				// The userInfo.Id is the NameID in SAML response, it could be name / email / phone
@@ -955,14 +954,7 @@ func (c *ApiController) Login() {
 					}
 
 					if tmpUser != nil {
-						var uid uuid.UUID
-						uid, err = uuid.NewRandom()
-						if err != nil {
-							c.ResponseError(err.Error())
-							return
-						}
-
-						uidStr := strings.Split(uid.String(), "-")
+						uidStr := strings.Split(util.GenerateUUID(), "-")
 						userInfo.Username = fmt.Sprintf("%s_%s", userInfo.Username, uidStr[1])
 					}
 
@@ -1066,7 +1058,7 @@ func (c *ApiController) Login() {
 				resp = &Response{Status: "error", Msg: fmt.Sprintf(c.T("general:The user: %s doesn't exist"), util.GetId(application.Organization, userInfo.Id))}
 			}
 			// resp = &Response{Status: "ok", Msg: "", Data: res}
-		} else { // authForm.Method != "signup"
+		} else { // authForm.Method == "link"
 			userId := c.GetSessionUsername()
 			if userId == "" {
 				c.ResponseError(fmt.Sprintf(c.T("general:The user: %s doesn't exist"), util.GetId(application.Organization, userInfo.Id)), userInfo)
@@ -1431,7 +1423,7 @@ func (c *ApiController) Callback() {
 	code := c.GetString("code")
 	state := c.GetString("state")
 
-	frontendCallbackUrl := fmt.Sprintf("/callback?code=%s&state=%s", code, state)
+	frontendCallbackUrl := fmt.Sprintf("/callback?code=%s&state=%s", url.QueryEscape(code), url.QueryEscape(state))
 	c.Ctx.Redirect(http.StatusFound, frontendCallbackUrl)
 }
 

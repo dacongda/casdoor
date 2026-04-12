@@ -13,7 +13,8 @@
 // limitations under the License.
 
 import React, {Suspense, lazy} from "react";
-import {Button, Checkbox, Col, Form, Input, Result, Spin, Tabs, message} from "antd";
+import {Button, Checkbox, Col, Form, Input, Result, Tabs, message} from "antd";
+import Loading from "../common/Loading";
 import {ArrowLeftOutlined, LockOutlined, UserOutlined} from "@ant-design/icons";
 import {withRouter} from "react-router-dom";
 import * as UserWebauthnBackend from "../backend/UserWebauthnBackend";
@@ -32,7 +33,7 @@ import i18next from "i18next";
 import CustomGithubCorner from "../common/CustomGithubCorner";
 import {SendCodeInput} from "../common/SendCodeInput";
 import LanguageSelect from "../common/select/LanguageSelect";
-import {CaptchaModal, CaptchaRule} from "../common/modal/CaptchaModal";
+import {CaptchaModal} from "../common/modal/CaptchaModal";
 import RedirectForm from "../common/RedirectForm";
 import {RequiredMfa} from "./mfa/MfaAuthVerifyForm";
 import {GoogleOneTapLoginVirtualButton} from "./GoogleLoginButton";
@@ -89,10 +90,6 @@ class LoginPage extends React.Component {
     this.captchaRef.current?.loadCaptcha?.();
   }
 
-  isInlineCaptchaEnabled(application = this.getApplicationObj()) {
-    return application?.signinItems?.some(signinItem => signinItem.name === "Captcha" && signinItem.rule === "inline");
-  }
-
   componentDidMount() {
     if (this.getApplicationObj() === undefined) {
       if (this.state.type === "login" || this.state.type === "saml") {
@@ -140,21 +137,6 @@ class LoginPage extends React.Component {
           values["application"] = this.props.application.name;
           this.login(values);
         }
-      }
-    }
-  }
-
-  getCaptchaRule(application) {
-    const captchaProviderItems = this.getCaptchaProviderItems(application);
-    if (captchaProviderItems) {
-      if (captchaProviderItems.some(providerItem => providerItem.rule === "Always")) {
-        return CaptchaRule.Always;
-      } else if (captchaProviderItems.some(providerItem => providerItem.rule === "Dynamic")) {
-        return CaptchaRule.Dynamic;
-      } else if (captchaProviderItems.some(providerItem => providerItem.rule === "Internet-Only")) {
-        return CaptchaRule.InternetOnly;
-      } else {
-        return CaptchaRule.Never;
       }
     }
   }
@@ -365,7 +347,7 @@ class LoginPage extends React.Component {
 
     if (resp.data3) {
       sessionStorage.setItem("signinUrl", window.location.pathname + window.location.search);
-      Setting.goToLinkSoft(ths, `/forget/${application.name}`);
+      Setting.goToLinkSoft(ths, "/account");
       return;
     }
 
@@ -459,20 +441,20 @@ class LoginPage extends React.Component {
       } else {
         values["password"] = passwordCipher;
       }
-      const captchaRule = this.getCaptchaRule(this.getApplicationObj());
+      const captchaRule = Setting.getCaptchaRule(this.getApplicationObj());
       const application = this.getApplicationObj();
-      const inlineCaptchaEnabled = this.isInlineCaptchaEnabled(application);
+      const inlineCaptchaEnabled = Setting.isInlineCaptchaEnabled(application);
       if (!inlineCaptchaEnabled) {
-        if (captchaRule === CaptchaRule.Always) {
+        if (captchaRule === Setting.CaptchaRule.Always) {
           this.setState({
             openCaptchaModal: true,
             values: values,
           });
           return;
-        } else if (captchaRule === CaptchaRule.Dynamic) {
+        } else if (captchaRule === Setting.CaptchaRule.Dynamic) {
           this.checkCaptchaStatus(values);
           return;
-        } else if (captchaRule === CaptchaRule.InternetOnly) {
+        } else if (captchaRule === Setting.CaptchaRule.InternetOnly) {
           this.checkCaptchaStatus(values);
           return;
         }
@@ -489,7 +471,7 @@ class LoginPage extends React.Component {
     // here we are supposed to determine whether Casdoor is working as an OAuth server or CAS server
     values["language"] = this.state.userLang ?? "";
     const usedCaptcha = this.state.captchaValues !== undefined;
-    const inlineCaptchaEnabled = this.isInlineCaptchaEnabled();
+    const inlineCaptchaEnabled = Setting.isInlineCaptchaEnabled(this.getApplicationObj());
     const shouldRefreshCaptcha = usedCaptcha && inlineCaptchaEnabled && !this.state.loginMethod?.includes("verificationCode");
     if (this.state.type === "cas") {
       // CAS
@@ -537,7 +519,8 @@ class LoginPage extends React.Component {
             if (responseType === "login") {
               if (res.data3) {
                 sessionStorage.setItem("signinUrl", window.location.pathname + window.location.search);
-                Setting.goToLinkSoft(this, `/forget/${this.state.applicationName}`);
+                Setting.goToLinkSoft(this, "/account");
+                return;
               }
               Setting.showMessage("success", i18next.t("application:Logged in successfully"));
               this.props.onLoginSuccess();
@@ -551,7 +534,8 @@ class LoginPage extends React.Component {
             } else if (responseTypes.includes("token") || responseTypes.includes("id_token")) {
               if (res.data3) {
                 sessionStorage.setItem("signinUrl", window.location.pathname + window.location.search);
-                Setting.goToLinkSoft(this, `/forget/${this.state.applicationName}`);
+                Setting.goToLinkSoft(this, "/account");
+                return;
               }
               const amendatoryResponseType = responseType === "token" ? "access_token" : responseType;
               const accessToken = res.data;
@@ -573,7 +557,8 @@ class LoginPage extends React.Component {
               }
               if (res.data3) {
                 sessionStorage.setItem("signinUrl", window.location.pathname + window.location.search);
-                Setting.goToLinkSoft(this, `/forget/${this.state.applicationName}`);
+                Setting.goToLinkSoft(this, "/account");
+                return;
               }
               if (res.data2.method === "POST") {
                 this.setState({
@@ -695,7 +680,11 @@ class LoginPage extends React.Component {
       return (
         <div key={resultItemKey} className="login-languages">
           <div dangerouslySetInnerHTML={{__html: ("<style>" + signinItem.customCss?.replaceAll("<style>", "").replaceAll("</style>", "") + "</style>")}} />
-          <LanguageSelect languages={application.organizationObj.languages} onClick={key => {this.setState({userLang: key});}} />
+          <LanguageSelect
+            languages={application.organizationObj.languages}
+            mode={signinItem.rule}
+            onClick={key => {this.setState({userLang: key});}}
+          />
         </div>
       );
     } else if (signinItem.name === "Signin methods") {
@@ -862,7 +851,7 @@ class LoginPage extends React.Component {
           <div dangerouslySetInnerHTML={{__html: ("<style>" + signinItem.customCss?.replaceAll("<style>", "").replaceAll("</style>", "") + "</style>")}} />
           <div className="login-forget-password">
             <Form.Item name="autoSignin" valuePropName="checked" noStyle>
-              <Checkbox style={{float: "left"}}>
+              <Checkbox className="login-auto-signin" style={{float: "left"}}>
                 {i18next.t("login:Auto sign in")}
               </Checkbox>
             </Form.Item>
@@ -938,7 +927,7 @@ class LoginPage extends React.Component {
             {
               application.providers.filter(providerItem => this.isProviderVisible(providerItem)).map((providerItem, id) => {
                 if (providerHint === providerItem.provider.name) {
-                  goToLink(Provider.getAuthUrl(application, providerItem.provider, "signup"));
+                  goToLink(Provider.getAuthUrl(application, providerItem.provider, this.state.mode ?? "signup"));
                   return;
                 }
                 return (
@@ -951,7 +940,7 @@ class LoginPage extends React.Component {
                     }
                   }}>
                     {
-                      ProviderButton.renderProviderLogo(providerItem.provider, application, null, null, signinItem.rule, this.props.location)
+                      ProviderButton.renderProviderLogo(providerItem.provider, application, null, null, signinItem.rule, this.props.location, this.state.mode ?? "signup")
                     }
                   </span>
                 );
@@ -1101,40 +1090,24 @@ class LoginPage extends React.Component {
     }
   }
 
-  getCaptchaProviderItems(application) {
-    const providers = application?.providers;
-
-    if (providers === undefined || providers === null) {
-      return null;
-    }
-
-    return providers.filter(providerItem => {
-      if (providerItem.provider === undefined || providerItem.provider === null) {
-        return false;
-      }
-
-      return providerItem.provider.category === "Captcha";
-    });
-  }
-
   renderCaptchaModal(application, noModal) {
-    if (this.getCaptchaRule(this.getApplicationObj()) === CaptchaRule.Never) {
+    if (Setting.getCaptchaRule(this.getApplicationObj()) === Setting.CaptchaRule.Never) {
       return null;
     }
-    const captchaProviderItems = this.getCaptchaProviderItems(application);
+    const captchaProviderItems = Setting.getCaptchaProviderItems(application);
     const alwaysProviderItems = captchaProviderItems.filter(providerItem => providerItem.rule === "Always");
     const dynamicProviderItems = captchaProviderItems.filter(providerItem => providerItem.rule === "Dynamic");
     const internetOnlyProviderItems = captchaProviderItems.filter(providerItem => providerItem.rule === "Internet-Only");
 
     // Select provider based on the active captcha rule, not fixed priority
-    const captchaRule = this.getCaptchaRule(this.getApplicationObj());
+    const captchaRule = Setting.getCaptchaRule(this.getApplicationObj());
     let provider = null;
 
-    if (captchaRule === CaptchaRule.Always && alwaysProviderItems.length > 0) {
+    if (captchaRule === Setting.CaptchaRule.Always && alwaysProviderItems.length > 0) {
       provider = alwaysProviderItems[0].provider;
-    } else if (captchaRule === CaptchaRule.Dynamic && dynamicProviderItems.length > 0) {
+    } else if (captchaRule === Setting.CaptchaRule.Dynamic && dynamicProviderItems.length > 0) {
       provider = dynamicProviderItems[0].provider;
-    } else if (captchaRule === CaptchaRule.InternetOnly && internetOnlyProviderItems.length > 0) {
+    } else if (captchaRule === Setting.CaptchaRule.InternetOnly && internetOnlyProviderItems.length > 0) {
       provider = internetOnlyProviderItems[0].provider;
     }
 
@@ -1269,9 +1242,12 @@ class LoginPage extends React.Component {
         const rawId = assertion.rawId;
         const sig = assertion.response.signature;
         const userHandle = assertion.response.userHandle;
+        const resourceQuery = oAuthParams?.resource
+          ? `&resource=${encodeURIComponent(oAuthParams.resource)}`
+          : "";
         let finishUrl = `${Setting.ServerUrl}/api/webauthn/signin/finish?responseType=${values["type"]}`;
         if (values["type"] === "code") {
-          finishUrl = `${Setting.ServerUrl}/api/webauthn/signin/finish?responseType=${values["type"]}&clientId=${oAuthParams.clientId}&scope=${oAuthParams.scope}&redirectUri=${oAuthParams.redirectUri}&nonce=${oAuthParams.nonce}&state=${oAuthParams.state}&codeChallenge=${oAuthParams.codeChallenge}&challengeMethod=${oAuthParams.challengeMethod}`;
+          finishUrl = `${Setting.ServerUrl}/api/webauthn/signin/finish?responseType=${values["type"]}&clientId=${oAuthParams.clientId}&scope=${oAuthParams.scope}&redirectUri=${oAuthParams.redirectUri}&nonce=${oAuthParams.nonce}&state=${oAuthParams.state}&codeChallenge=${oAuthParams.codeChallenge}&challengeMethod=${oAuthParams.challengeMethod}${resourceQuery}`;
         }
         return fetch(finishUrl, {
           method: "POST",
@@ -1358,10 +1334,10 @@ class LoginPage extends React.Component {
               <SendCodeInput
                 disabled={this.state.username?.length === 0 || !this.state.validEmailOrPhone}
                 method={"login"}
-                onButtonClickArgs={[this.state.username, this.state.validEmail ? "email" : "phone", Setting.getApplicationName(application)]}
+                onButtonClickArgs={[this.state.username, this.state.validEmail ? "email" : "phone", Setting.getApplicationName(application), this.state.username]}
                 application={application}
                 captchaValue={this.state.captchaValues}
-                useInlineCaptcha={this.isInlineCaptchaEnabled(application)}
+                useInlineCaptcha={Setting.isInlineCaptchaEnabled(application)}
                 refreshCaptcha={this.refreshInlineCaptcha}
               />
             </Form.Item>
@@ -1390,7 +1366,7 @@ class LoginPage extends React.Component {
               onButtonClickArgs={[this.state.username, this.state.validEmail ? "email" : "phone", Setting.getApplicationName(application)]}
               application={application}
               captchaValue={this.state.captchaValues}
-              useInlineCaptcha={this.isInlineCaptchaEnabled(application)}
+              useInlineCaptcha={Setting.isInlineCaptchaEnabled(application)}
               refreshCaptcha={this.refreshInlineCaptcha}
             />
           </Form.Item>
@@ -1575,11 +1551,9 @@ class LoginPage extends React.Component {
 
     const visibleOAuthProviderItems = (application.providers === null) ? [] : application.providers.filter(providerItem => this.isProviderVisible(providerItem) && providerItem.provider?.category !== "SAML");
     if (this.props.preview !== "auto" && !Setting.isPasswordEnabled(application) && !Setting.isCodeSigninEnabled(application) && !Setting.isWebAuthnEnabled(application) && !Setting.isLdapEnabled(application) && visibleOAuthProviderItems.length === 1) {
-      Setting.goToLink(Provider.getAuthUrl(application, visibleOAuthProviderItems[0].provider, "signup"));
+      Setting.goToLink(Provider.getAuthUrl(application, visibleOAuthProviderItems[0].provider, this.state.mode ?? "signup"));
       return (
-        <div style={{display: "flex", justifyContent: "center", alignItems: "center", width: "100%"}}>
-          <Spin size="large" tip={i18next.t("login:Signing in...")} />
-        </div>
+        <Loading type="page" tip={i18next.t("login:Signing in...")} />
       );
     }
 

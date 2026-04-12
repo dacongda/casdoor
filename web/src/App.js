@@ -20,9 +20,11 @@ import {setOrgIsTourVisible, setTourLogo} from "./TourConfig";
 import {StyleProvider, legacyLogicalPropertiesTransformer} from "@ant-design/cssinjs";
 import {GithubOutlined, InfoCircleFilled, ShareAltOutlined} from "@ant-design/icons";
 import {Alert, Button, ConfigProvider, Drawer, FloatButton, Layout, Result, Tooltip} from "antd";
+import {AiDots} from "./common/Loading";
 import {Route, Switch, withRouter} from "react-router-dom";
 import CustomGithubCorner from "./common/CustomGithubCorner";
 import * as Conf from "./Conf";
+import {shadcnThemeComponents, shadcnThemeToken} from "./shadcnTheme";
 
 import * as Auth from "./auth/Auth";
 import EntryPage from "./EntryPage";
@@ -125,6 +127,7 @@ class App extends Component {
       application: undefined,
     };
     Setting.initServerUrl();
+    Setting.initWebConfig();
     Auth.initAuthWithConfig({
       serverUrl: Setting.ServerUrl,
       appName: Conf.DefaultApplication, // the application used in Casdoor root path: "/"
@@ -173,11 +176,12 @@ class App extends Component {
     const validMenuItems = [
       "/", "/shortcuts", "/apps", // Home group
       "/organizations", "/groups", "/users", "/invitations", // User Management
-      "/applications", "/providers", "/resources", "/certs", // Identity
+      "/applications", "/providers", "/resources", "/certs", "/keys", // Identity
       "/roles", "/permissions", "/models", "/adapters", "/enforcers", // Authorization
-      "/sessions", "/records", "/tokens", "/verifications", // Logging & Auditing
+      "/agents", "/servers", "/server-store", "/entries", "/sites", "/rules", // LLM AI
+      "/sessions", "/records", "/tokens", "/verifications", // Auditing
       "/products", "/orders", "/payments", "/plans", "/pricings", "/subscriptions", "/transactions", // Business
-      "/sysinfo", "/forms", "/syncers", "/webhooks", "/tickets", "/swagger", // Admin
+      "/sysinfo", "/forms", "/syncers", "/webhooks", "/webhook-events", "/tickets", "/swagger", // Admin
     ];
 
     const count = navItems.filter(item => validMenuItems.includes(item)).length;
@@ -213,6 +217,22 @@ class App extends Component {
         return "/resources";
       } else if (uri.includes("/certs")) {
         return "/certs";
+      }
+    } else if (uri.includes("/keys")) {
+      return "/keys";
+    } else if (uri.includes("/agents") || uri.includes("/servers") || uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {
+      if (uri.includes("/agents")) {
+        return "/agents";
+      } else if (uri.includes("/servers")) {
+        return "/servers";
+      } else if (uri.includes("/server-store")) {
+        return "/server-store";
+      } else if (uri.includes("/entries")) {
+        return "/entries";
+      } else if (uri.includes("/sites")) {
+        return "/sites";
+      } else if (uri.includes("/rules")) {
+        return "/rules";
       }
     } else if (uri.includes("/roles") || uri.includes("/permissions") || uri.includes("/models") || uri.includes("/adapters") || uri.includes("/enforcers")) {
       if (uri.includes("/roles")) {
@@ -252,14 +272,16 @@ class App extends Component {
       } else if (uri.includes("/transactions")) {
         return "/transactions";
       }
-    } else if (uri.includes("/sysinfo") || uri.includes("/forms") || uri.includes("/syncers") || uri.includes("/webhooks") || uri.includes("/tickets")) {
+    } else if (uri.includes("/sysinfo") || uri.includes("/forms") || uri.includes("/syncers") || uri.includes("/webhooks") || uri.includes("/webhook-events") || uri.includes("/tickets")) {
       if (uri.includes("/sysinfo")) {
         return "/sysinfo";
       } else if (uri.includes("/forms")) {
         return "/forms";
       } else if (uri.includes("/syncers")) {
         return "/syncers";
-      } else if (uri.includes("/webhooks")) {
+      } else if (uri.includes("/webhook-events")) {
+        return "/webhook-events";
+      } else if (uri.includes("/webhooks") || uri.includes("/webhook-events")) {
         return "/webhooks";
       } else if (uri.includes("/tickets")) {
         return "/tickets";
@@ -292,15 +314,17 @@ class App extends Component {
       this.setState({selectedMenuKey: "/home"});
     } else if (uri.includes("/organizations") || uri.includes("/trees") || uri.includes("/groups") || uri.includes("/users") || uri.includes("/invitations")) {
       this.setState({selectedMenuKey: "/orgs"});
-    } else if (uri.includes("/applications") || uri.includes("/providers") || uri.includes("/resources") || uri.includes("/certs")) {
+    } else if (uri.includes("/applications") || uri.includes("/providers") || uri.includes("/resources") || uri.includes("/certs") || uri.includes("/keys")) {
       this.setState({selectedMenuKey: "/identity"});
+    } else if (uri.includes("/agents") || uri.includes("/servers") || uri.includes("/server-store") || uri.includes("/entries") || uri.includes("/sites") || uri.includes("/rules")) {
+      this.setState({selectedMenuKey: "/gateway"});
     } else if (uri.includes("/roles") || uri.includes("/permissions") || uri.includes("/models") || uri.includes("/adapters") || uri.includes("/enforcers")) {
       this.setState({selectedMenuKey: "/auth"});
     } else if (uri.includes("/records") || uri.includes("/tokens") || uri.includes("/sessions") || uri.includes("/verifications")) {
       this.setState({selectedMenuKey: "/logs"});
     } else if (uri.includes("/product-store") || uri.includes("/products") || uri.includes("/orders") || uri.includes("/payments") || uri.includes("/plans") || uri.includes("/pricings") || uri.includes("/subscriptions") || uri.includes("/transactions")) {
       this.setState({selectedMenuKey: "/business"});
-    } else if (uri.includes("/sysinfo") || uri.includes("/forms") || uri.includes("/syncers") || uri.includes("/webhooks") || uri.includes("/tickets")) {
+    } else if (uri.includes("/sysinfo") || uri.includes("/forms") || uri.includes("/syncers") || uri.includes("/webhooks") || uri.includes("/webhook-events") || uri.includes("/tickets")) {
       this.setState({selectedMenuKey: "/admin"});
     } else if (uri.includes("/signup")) {
       this.setState({selectedMenuKey: "/signup"});
@@ -590,11 +614,14 @@ class App extends Component {
       return (
         <ConfigProvider
           locale={getAntdLocale(Setting.getLanguage())}
+          spin={{indicator: <AiDots />}}
           theme={{
             token: {
+              ...shadcnThemeToken,
               colorPrimary: themeData.colorPrimary,
               borderRadius: themeData.borderRadius,
             },
+            components: shadcnThemeComponents,
             algorithm: Setting.getAlgorithm(this.state.themeAlgorithm),
           }}>
           <StyleProvider hashPriority="high" transformers={[legacyLogicalPropertiesTransformer]}>
@@ -732,12 +759,15 @@ class App extends Component {
         }
         <ConfigProvider
           locale={getAntdLocale(Setting.getLanguage())}
+          spin={{indicator: <AiDots />}}
           theme={{
             token: {
+              ...shadcnThemeToken,
               colorPrimary: this.state.themeData.colorPrimary,
               colorInfo: this.state.themeData.colorPrimary,
               borderRadius: this.state.themeData.borderRadius,
             },
+            components: shadcnThemeComponents,
             algorithm: Setting.getAlgorithm(this.state.themeAlgorithm),
           }}>
           <StyleProvider hashPriority="high" transformers={[legacyLogicalPropertiesTransformer]}>

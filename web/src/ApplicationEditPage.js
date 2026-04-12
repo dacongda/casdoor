@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import React from "react";
+import Loading from "./common/Loading";
 import {
   Button,
   Card,
@@ -594,6 +595,20 @@ class ApplicationEditPage extends React.Component {
               }} />
             </Col>
           </Row>
+          {
+            this.state.application.organization !== "built-in" ? (
+              <Row style={{marginTop: "20px"}} >
+                <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 19 : 2}>
+                  {Setting.getLabel(i18next.t("application:Enable guest signin"), i18next.t("application:Enable guest signin - Tooltip"))} :
+                </Col>
+                <Col span={1} >
+                  <Switch checked={this.state.application.enableGuestSignin} onChange={checked => {
+                    this.updateApplicationField("enableGuestSignin", checked);
+                  }} />
+                </Col>
+              </Row>
+            ) : null
+          }
           <Row style={{marginTop: "20px"}} >
             <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 19 : 2}>
               {Setting.getLabel(i18next.t("application:Enable exclusive signin"), i18next.t("application:Enable exclusive signin - Tooltip"))} :
@@ -1497,7 +1512,7 @@ class ApplicationEditPage extends React.Component {
         </div>
       } style={{margin: (Setting.isMobile()) ? "5px" : {}, height: "calc(100vh - 145px - 48px)", overflow: "hidden"}}
       styles={{body: {height: "100%"}}} type="inner">
-        <Layout style={{background: "inherit", height: "100%", overflow: "auto"}}>
+        <Layout style={{background: "inherit", height: "100%"}}>
           {
             this.state.menuMode === "horizontal" || !this.state.menuMode ? (
               <Header style={{background: "inherit", padding: "0px", position: "sticky", top: 0, height: 38, minHeight: 38}}>
@@ -1548,7 +1563,10 @@ class ApplicationEditPage extends React.Component {
                   </Menu>
                 </Sider>) : null
             }
-            <Content style={{padding: "15px"}}>
+            <Content style={{padding: "15px",
+              overflowY: "auto",
+              height: "100%",
+              paddingBottom: "80px"}}>
               {this.renderApplicationForm()}
             </Content>
           </Layout>
@@ -1733,7 +1751,7 @@ class ApplicationEditPage extends React.Component {
     return (
       <div>
         {
-          this.state.application !== null ? this.renderApplication() : null
+          this.state.application !== null ? this.renderApplication() : <Loading type="page" tip={i18next.t("login:Loading")} />
         }
       </div>
     );

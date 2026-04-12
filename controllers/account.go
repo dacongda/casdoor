@@ -21,6 +21,7 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/beego/beego/v2/core/logs"
 	"github.com/casdoor/casdoor/form"
 	"github.com/casdoor/casdoor/object"
 	"github.com/casdoor/casdoor/util"
@@ -373,6 +374,10 @@ func (c *ApiController) Logout() {
 			return
 		}
 
+		// Retrieve application and token before clearing the session
+		application := c.GetSessionApplication()
+		sessionToken := c.GetSessionToken()
+
 		c.ClearUserSession()
 		c.ClearTokenSession()
 
@@ -381,7 +386,9 @@ func (c *ApiController) Logout() {
 			return
 		}
 
-		application := c.GetSessionApplication()
+		// Propagate logout to external Custom OAuth2 providers
+		object.InvokeCustomProviderLogout(application, sessionToken)
+
 		if application == nil || application.Name == "app-built-in" || application.HomepageUrl == "" {
 			c.ResponseOk(user)
 			return
@@ -409,7 +416,7 @@ func (c *ApiController) Logout() {
 			return
 		}
 		if application == nil {
-			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist")), token.Application)
+			c.ResponseError(fmt.Sprintf(c.T("auth:The application: %s does not exist"), token.Application))
 			return
 		}
 
@@ -425,6 +432,9 @@ func (c *ApiController) Logout() {
 			c.ResponseError(err.Error())
 			return
 		}
+
+		// Propagate logout to external Custom OAuth2 providers
+		object.InvokeCustomProviderLogout(application, accessToken)
 
 		if redirectUri == "" {
 			c.ResponseOk()
@@ -467,6 +477,10 @@ func (c *ApiController) SsoLogout() {
 	// Default is true for backward compatibility
 	logoutAll := c.Ctx.Input.Query("logoutAll")
 	logoutAllSessions := logoutAll == "" || logoutAll == "true" || logoutAll == "1"
+
+	// Retrieve application and token before clearing the session
+	ssoApplication := c.GetSessionApplication()
+	ssoSessionToken := c.GetSessionToken()
 
 	c.ClearUserSession()
 	c.ClearTokenSession()
@@ -547,6 +561,9 @@ func (c *ApiController) SsoLogout() {
 		}
 	}
 
+	// Propagate logout to external Custom OAuth2 providers
+	object.InvokeCustomProviderLogout(ssoApplication, ssoSessionToken)
+
 	c.ResponseOk()
 }
 
@@ -558,6 +575,11 @@ func (c *ApiController) SsoLogout() {
 // @router /get-account [get]
 func (c *ApiController) GetAccount() {
 	var err error
+	err = util.AppendWebConfigCookie(c.Ctx)
+	if err != nil {
+		logs.Error("AppendWebConfigCookie failed in GetAccount, error: %s", err)
+	}
+
 	user, ok := c.RequireSignedInUser()
 	if !ok {
 		return

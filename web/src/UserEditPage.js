@@ -15,10 +15,11 @@
 import React from "react";
 import {
   Button, Card, Col, Form, Input, InputNumber, Layout, List,
-  Menu, Result, Row, Select, Space, Spin, Switch, Tabs, Tag, Tooltip
+  Menu, Result, Row, Select, Space, Switch, Tabs, Tag, Tooltip
 } from "antd";
 import {withRouter} from "react-router-dom";
 import {TotpMfaType} from "./auth/MfaSetupPage";
+import Loading from "./common/Loading";
 import * as GroupBackend from "./backend/GroupBackend";
 import * as UserBackend from "./backend/UserBackend";
 import * as OrganizationBackend from "./backend/OrganizationBackend";
@@ -134,17 +135,6 @@ class UserEditPage extends React.Component {
       })
       .catch(error => {
         Setting.showMessage("error", `${i18next.t("general:Failed to connect to server")}: ${error}`);
-      });
-  }
-
-  addUserKeys() {
-    UserBackend.addUserKeys(this.state.user)
-      .then((res) => {
-        if (res.status === "ok") {
-          this.getUser();
-        } else {
-          Setting.showMessage("error", res.msg);
-        }
       });
   }
 
@@ -755,7 +745,7 @@ class UserEditPage extends React.Component {
       return (
         <Row style={{marginTop: "20px"}} >
           <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
-            {Setting.getLabel(i18next.t("user:Tag"), i18next.t("product:Tag - Tooltip"))} :
+            {Setting.getLabel(i18next.t("general:Tag"), i18next.t("product:Tag - Tooltip"))} :
           </Col>
           <Col span={22} >
             {
@@ -968,39 +958,6 @@ class UserEditPage extends React.Component {
           <Col span={22} >
             <Input value={this.state.user.registerSource} disabled={!this.props.account.isAdmin}
               onChange={e => {this.updateUserField("registerSource", e.target.value);}} />
-          </Col>
-        </Row>
-      );
-    } else if (accountItem.name === "API key") {
-      return (
-        <Row style={{marginTop: "20px"}} >
-          <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
-            {Setting.getLabel(i18next.t("general:API key"), i18next.t("general:API key - Tooltip"))} :
-          </Col>
-          <Col span={22} >
-            <Row style={{marginTop: "20px"}} >
-              <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
-                {Setting.getLabel(i18next.t("general:Access key"), i18next.t("general:Access key - Tooltip"))} :
-              </Col>
-              <Col span={22} >
-                <Input value={this.state.user.accessKey} disabled={true} />
-              </Col>
-            </Row>
-            <Row style={{marginTop: "20px"}} >
-              <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
-                {Setting.getLabel(i18next.t("general:Access secret"), i18next.t("general:Access secret - Tooltip"))} :
-              </Col>
-              <Col span={22} >
-                <Input value={this.state.user.accessSecret} disabled={true} />
-              </Col>
-            </Row>
-            <Row style={{marginTop: "20px", marginBottom: "20px"}} >
-              <Col span={22} >
-                <Button type="primary" onClick={() => this.addUserKeys()}>
-                  {i18next.t("general:Generate")}
-                </Button>
-              </Col>
-            </Row>
           </Col>
         </Row>
       );
@@ -1637,7 +1594,7 @@ class UserEditPage extends React.Component {
     return (
       <div>
         {
-          this.state.loading ? <Spin size="large" style={{marginLeft: "50%", marginTop: "10%"}} /> : (
+          this.state.loading ? <Loading type="page" tip={i18next.t("login:Loading")} /> : (
             this.state.user !== null ? this.renderUser() :
               <Result
                 status="404"

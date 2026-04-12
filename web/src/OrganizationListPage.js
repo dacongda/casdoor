@@ -94,7 +94,6 @@ class OrganizationListPage extends BaseListPage {
         {name: "Signup application", visible: true, viewRule: "Public", modifyRule: "Admin"},
         {name: "Register type", visible: true, viewRule: "Public", modifyRule: "Admin"},
         {name: "Register source", visible: true, viewRule: "Public", modifyRule: "Admin"},
-        {name: "API key", label: i18next.t("general:API key"), modifyRule: "Self"},
         {name: "Groups", visible: true, viewRule: "Public", modifyRule: "Admin"},
         {name: "Roles", visible: true, viewRule: "Public", modifyRule: "Immutable"},
         {name: "Permissions", visible: true, viewRule: "Public", modifyRule: "Immutable"},
@@ -224,7 +223,7 @@ class OrganizationListPage extends BaseListPage {
         title: i18next.t("general:Password type"),
         dataIndex: "passwordType",
         key: "passwordType",
-        width: "150px",
+        width: "160px",
         sorter: true,
         filterMultiple: false,
         filters: [
@@ -268,7 +267,7 @@ class OrganizationListPage extends BaseListPage {
         title: i18next.t("organization:User balance"),
         dataIndex: "userBalance",
         key: "userBalance",
-        width: "120px",
+        width: "130px",
         sorter: true,
         render: (text, record, index) => {
           return text ?? 0;
@@ -278,7 +277,7 @@ class OrganizationListPage extends BaseListPage {
         title: i18next.t("organization:Balance credit"),
         dataIndex: "balanceCredit",
         key: "balanceCredit",
-        width: "120px",
+        width: "130px",
         sorter: true,
         render: (text, record, index) => {
           return text ?? 0;
@@ -288,7 +287,7 @@ class OrganizationListPage extends BaseListPage {
         title: i18next.t("organization:Balance currency"),
         dataIndex: "balanceCurrency",
         key: "balanceCurrency",
-        width: "140px",
+        width: "160px",
         sorter: true,
         render: (text, record, index) => {
           return text || "USD";
@@ -347,7 +346,7 @@ class OrganizationListPage extends BaseListPage {
               <Button type="primary" size="small" disabled={!Setting.isAdminUser(this.props.account)} onClick={this.addOrganization.bind(this)}>{i18next.t("general:Add")}</Button>
             </div>
           )}
-          loading={this.state.loading}
+          loading={this.getTableLoading()}
           onChange={this.handleTableChange}
         />
       </div>

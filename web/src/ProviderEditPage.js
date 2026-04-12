@@ -13,6 +13,7 @@
 // limitations under the License.
 
 import React from "react";
+import Loading from "./common/Loading";
 import {Button, Card, Col, Input, Row, Select, Switch} from "antd";
 import {LinkOutlined} from "@ant-design/icons";
 import * as ProviderBackend from "./backend/ProviderBackend";
@@ -32,9 +33,35 @@ import {renderWeb3ProviderFields} from "./provider/Web3ProviderFields";
 import {renderStorageProviderFields} from "./provider/StorageProviderFields";
 import {renderFaceIdProviderFields} from "./provider/FaceIDProviderFields";
 import {renderIDVerificationProviderFields} from "./provider/IDVerificationProviderFields";
+import {renderLogProviderFields} from "./provider/LogProviderFields";
 
 const {Option} = Select;
 const {TextArea} = Input;
+
+function isDefaultProviderName(name) {
+  return /^provider_[a-z0-9]+$/.test(name);
+}
+
+function isDefaultProviderDisplayName(displayName) {
+  return /^New Provider - [a-z0-9]+$/.test(displayName);
+}
+
+function getAutoProviderName(category, type, subType) {
+  const catSlug = category.toLowerCase().replace(/[\s-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+  const typeSlug = type.toLowerCase().replace(/[\s-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+  if (subType) {
+    const subTypeSlug = subType.toLowerCase().replace(/[\s-]+/g, "_").replace(/[^a-z0-9_]/g, "");
+    return `provider_${catSlug}_${typeSlug}_${subTypeSlug}`;
+  }
+  return `provider_${catSlug}_${typeSlug}`;
+}
+
+function getAutoProviderDisplayName(category, type, subType) {
+  if (subType) {
+    return `${category} ${type} ${subType}`;
+  }
+  return `${category} ${type}`;
+}
 
 const defaultUserMapping = {
   id: "id",
@@ -76,6 +103,8 @@ class ProviderEditPage extends React.Component {
       certs: [],
       organizations: [],
       mode: props.location.mode !== undefined ? props.location.mode : "edit",
+      nameNotUserEdited: false,
+      displayNameNotUserEdited: false,
     };
   }
 
@@ -86,6 +115,17 @@ class ProviderEditPage extends React.Component {
   }
 
   getProvider() {
+    if (this.state.mode === "add" && this.props.location.provider) {
+      const provider = this.props.location.provider;
+      provider.userMapping = provider.userMapping || defaultUserMapping;
+      this.setState({
+        provider: provider,
+        nameNotUserEdited: isDefaultProviderName(provider.name),
+        displayNameNotUserEdited: isDefaultProviderDisplayName(provider.displayName),
+      });
+      return;
+    }
+
     ProviderBackend.getProvider(this.state.owner, this.state.providerName)
       .then((res) => {
         if (res.data === null) {
@@ -114,6 +154,8 @@ class ProviderEditPage extends React.Component {
           }
           this.setState({
             provider: provider,
+            nameNotUserEdited: isDefaultProviderName(provider.name),
+            displayNameNotUserEdited: isDefaultProviderDisplayName(provider.displayName),
           });
         } else {
           Setting.showMessage("error", res.msg);
@@ -454,7 +496,11 @@ class ProviderEditPage extends React.Component {
   }
 
   getProviderSubTypeOptions(type) {
-    if (type === "WeCom" || type === "Infoflow") {
+    if (type === "Agent") {
+      return ([
+        {id: "OpenClaw", name: "OpenClaw"},
+      ]);
+    } else if (type === "WeCom" || type === "Infoflow") {
       return (
         [
           {id: "Internal", name: i18next.t("provider:Internal")},
@@ -648,6 +694,7 @@ class ProviderEditPage extends React.Component {
           <Col span={22} >
             <Input value={this.state.provider.name} onChange={e => {
               this.updateProviderField("name", e.target.value);
+              this.setState({nameNotUserEdited: false});
             }} />
           </Col>
         </Row>
@@ -658,6 +705,7 @@ class ProviderEditPage extends React.Component {
           <Col span={22} >
             <Input value={this.state.provider.displayName} onChange={e => {
               this.updateProviderField("displayName", e.target.value);
+              this.setState({displayNameNotUserEdited: false});
             }} />
           </Col>
         </Row>
@@ -681,10 +729,13 @@ class ProviderEditPage extends React.Component {
           <Col span={22} >
             <Select virtual={false} style={{width: "100%"}} value={this.state.provider.category} onChange={(value => {
               this.updateProviderField("category", value);
+              let defaultType = "";
               if (value === "OAuth") {
-                this.updateProviderField("type", "Google");
+                defaultType = "Google";
+                this.updateProviderField("type", defaultType);
               } else if (value === "Email") {
-                this.updateProviderField("type", "Default");
+                defaultType = "Default";
+                this.updateProviderField("type", defaultType);
                 this.updateProviderField("host", "smtp.example.com");
                 this.updateProviderField("port", 465);
                 this.updateProviderField("sslMode", "Auto");
@@ -693,28 +744,53 @@ class ProviderEditPage extends React.Component {
                 this.updateProviderField("metadata", Setting.getDefaultInvitationHtmlEmailContent());
                 this.updateProviderField("receiver", this.props.account.email);
               } else if (value === "SMS") {
-                this.updateProviderField("type", "Twilio SMS");
+                defaultType = "Twilio SMS";
+                this.updateProviderField("type", defaultType);
               } else if (value === "Storage") {
-                this.updateProviderField("type", "AWS S3");
+                defaultType = "AWS S3";
+                this.updateProviderField("type", defaultType);
               } else if (value === "SAML") {
-                this.updateProviderField("type", "Keycloak");
+                defaultType = "Keycloak";
+                this.updateProviderField("type", defaultType);
               } else if (value === "Payment") {
-                this.updateProviderField("type", "PayPal");
+                defaultType = "PayPal";
+                this.updateProviderField("type", defaultType);
               } else if (value === "Captcha") {
-                this.updateProviderField("type", "Default");
+                defaultType = "Default";
+                this.updateProviderField("type", defaultType);
               } else if (value === "Web3") {
-                this.updateProviderField("type", "MetaMask");
+                defaultType = "MetaMask";
+                this.updateProviderField("type", defaultType);
               } else if (value === "Notification") {
-                this.updateProviderField("type", "Telegram");
+                defaultType = "Telegram";
+                this.updateProviderField("type", defaultType);
               } else if (value === "Face ID") {
-                this.updateProviderField("type", "Alibaba Cloud Facebody");
+                defaultType = "Alibaba Cloud Facebody";
+                this.updateProviderField("type", defaultType);
               } else if (value === "MFA") {
-                this.updateProviderField("type", "RADIUS");
+                defaultType = "RADIUS";
+                this.updateProviderField("type", defaultType);
                 this.updateProviderField("host", "");
                 this.updateProviderField("port", 1812);
               } else if (value === "ID Verification") {
-                this.updateProviderField("type", "Jumio");
+                defaultType = "Jumio";
+                this.updateProviderField("type", defaultType);
                 this.updateProviderField("endpoint", "");
+              } else if (value === "Log") {
+                defaultType = "Casdoor Permission Log";
+                this.updateProviderField("type", defaultType);
+                this.updateProviderField("host", "");
+                this.updateProviderField("port", 0);
+                this.updateProviderField("title", "");
+                this.updateProviderField("state", "Enabled");
+              }
+              if (defaultType) {
+                if (this.state.nameNotUserEdited) {
+                  this.updateProviderField("name", getAutoProviderName(value, defaultType, ""));
+                }
+                if (this.state.displayNameNotUserEdited) {
+                  this.updateProviderField("displayName", getAutoProviderDisplayName(value, defaultType, ""));
+                }
               }
             })}>
               {
@@ -722,6 +798,7 @@ class ProviderEditPage extends React.Component {
                   {id: "Captcha", name: "Captcha"},
                   {id: "Email", name: "Email"},
                   {id: "ID Verification", name: "ID Verification"},
+                  {id: "Log", name: "Log"},
                   {id: "MFA", name: "MFA"},
                   {id: "Notification", name: "Notification"},
                   {id: "OAuth", name: "OAuth"},
@@ -763,6 +840,12 @@ class ProviderEditPage extends React.Component {
                 this.updateProviderField("method", "GET");
                 this.updateProviderField("title", "");
               }
+              if (this.state.nameNotUserEdited) {
+                this.updateProviderField("name", getAutoProviderName(this.state.provider.category, value, ""));
+              }
+              if (this.state.displayNameNotUserEdited) {
+                this.updateProviderField("displayName", getAutoProviderDisplayName(this.state.provider.category, value, ""));
+              }
             })}>
               {
                 Setting.getProviderTypeOptions(this.state.provider.category)
@@ -776,7 +859,7 @@ class ProviderEditPage extends React.Component {
           </Col>
         </Row>
         {
-          this.state.provider.type !== "WeCom" && this.state.provider.type !== "Infoflow" && this.state.provider.type !== "WeChat" ? null : (
+          this.state.provider.type !== "WeCom" && this.state.provider.type !== "Infoflow" && this.state.provider.type !== "WeChat" && this.state.provider.type !== "Agent" ? null : (
             <React.Fragment>
               <Row style={{marginTop: "20px"}} >
                 <Col style={{marginTop: "5px"}} span={2}>
@@ -785,6 +868,12 @@ class ProviderEditPage extends React.Component {
                 <Col span={22} >
                   <Select virtual={false} style={{width: "100%"}} value={this.state.provider.subType} onChange={value => {
                     this.updateProviderField("subType", value);
+                    if (this.state.nameNotUserEdited) {
+                      this.updateProviderField("name", getAutoProviderName(this.state.provider.category, this.state.provider.type, value));
+                    }
+                    if (this.state.displayNameNotUserEdited) {
+                      this.updateProviderField("displayName", getAutoProviderDisplayName(this.state.provider.category, this.state.provider.type, value));
+                    }
                   }}>
                     {
                       this.getProviderSubTypeOptions(this.state.provider.type).map((providerSubType, index) => <Option key={index} value={providerSubType.id}>{providerSubType.name}</Option>)
@@ -851,6 +940,7 @@ class ProviderEditPage extends React.Component {
           (this.state.provider.category === "Captcha" && this.state.provider.type === "Default") ||
           (this.state.provider.category === "Web3") ||
           (this.state.provider.category === "MFA") ||
+          (this.state.provider.category === "Log") ||
           (this.state.provider.category === "Storage" && this.state.provider.type === "Local File System") ||
           (this.state.provider.category === "SMS" && this.state.provider.type === "Custom HTTP SMS") ||
           (this.state.provider.category === "Email" && this.state.provider.type === "Custom HTTP Email") ||
@@ -942,6 +1032,9 @@ class ProviderEditPage extends React.Component {
           ) : this.state.provider.category === "MFA" ? renderMfaProviderFields(
             this.state.provider,
             this.updateProviderField.bind(this)
+          ) : this.state.provider.category === "Log" ? renderLogProviderFields(
+            this.state.provider,
+            this.updateProviderField.bind(this)
           ) : this.state.provider.category === "SAML" ? renderSamlProviderFields(
             this.state.provider,
             this.updateProviderField.bind(this),
@@ -975,16 +1068,18 @@ class ProviderEditPage extends React.Component {
           this.state.provider,
           this.updateProviderField.bind(this)
         ) : null}
-        <Row style={{marginTop: "20px"}} >
-          <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
-            {Setting.getLabel(i18next.t("provider:Provider URL"), i18next.t("provider:Provider URL - Tooltip"))} :
-          </Col>
-          <Col span={22} >
-            <Input prefix={<LinkOutlined />} value={this.state.provider.providerUrl} onChange={e => {
-              this.updateProviderField("providerUrl", e.target.value);
-            }} />
-          </Col>
-        </Row>
+        {this.state.provider.category !== "Log" && (
+          <Row style={{marginTop: "20px"}} >
+            <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+              {Setting.getLabel(i18next.t("provider:Provider URL"), i18next.t("provider:Provider URL - Tooltip"))} :
+            </Col>
+            <Col span={22} >
+              <Input prefix={<LinkOutlined />} value={this.state.provider.providerUrl} onChange={e => {
+                this.updateProviderField("providerUrl", e.target.value);
+              }} />
+            </Col>
+          </Row>
+        )}
         {
           this.state.provider.category === "Captcha" ? renderCaptchaProviderFields(
             this.state.provider,
@@ -997,13 +1092,18 @@ class ProviderEditPage extends React.Component {
 
   submitProviderEdit(exitAfterSave) {
     const provider = Setting.deepCopy(this.state.provider);
-    ProviderBackend.updateProvider(this.state.owner, this.state.providerName, provider)
+    const isAdd = this.state.mode === "add";
+    const apiCall = isAdd
+      ? ProviderBackend.addProvider(provider)
+      : ProviderBackend.updateProvider(this.state.owner, this.state.providerName, provider);
+    apiCall
       .then((res) => {
         if (res.status === "ok") {
           Setting.showMessage("success", i18next.t("general:Successfully saved"));
           this.setState({
             owner: this.state.provider.owner,
             providerName: this.state.provider.name,
+            mode: "edit",
           });
 
           if (exitAfterSave) {
@@ -1013,7 +1113,9 @@ class ProviderEditPage extends React.Component {
           }
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to save")}: ${res.msg}`);
-          this.updateProviderField("name", this.state.providerName);
+          if (!isAdd) {
+            this.updateProviderField("name", this.state.providerName);
+          }
         }
       })
       .catch(error => {
@@ -1022,24 +1124,14 @@ class ProviderEditPage extends React.Component {
   }
 
   deleteProvider() {
-    ProviderBackend.deleteProvider(this.state.provider)
-      .then((res) => {
-        if (res.status === "ok") {
-          this.props.history.push("/providers");
-        } else {
-          Setting.showMessage("error", `${i18next.t("general:Failed to delete")}: ${res.msg}`);
-        }
-      })
-      .catch(error => {
-        Setting.showMessage("error", `${i18next.t("general:Failed to connect to server")}: ${error}`);
-      });
+    this.props.history.push("/providers");
   }
 
   render() {
     return (
       <div>
         {
-          this.state.provider !== null ? this.renderProvider() : null
+          this.state.provider !== null ? this.renderProvider() : <Loading type="page" tip={i18next.t("login:Loading")} />
         }
         <div style={{marginTop: "20px", marginLeft: "40px"}}>
           <Button size="large" onClick={() => this.submitProviderEdit(false)}>{i18next.t("general:Save")}</Button>

@@ -51,24 +51,13 @@ class ProviderListPage extends BaseListPage {
       enableSignUp: true,
       host: "",
       port: 0,
-      providerUrl: "https://github.com/organizations/xxx/settings/applications/1234567",
+      providerUrl: "",
     };
   }
 
   addProvider() {
     const newProvider = this.newProvider();
-    ProviderBackend.addProvider(newProvider)
-      .then((res) => {
-        if (res.status === "ok") {
-          this.props.history.push({pathname: `/providers/${newProvider.owner}/${newProvider.name}`, mode: "add"});
-          Setting.showMessage("success", i18next.t("general:Successfully added"));
-        } else {
-          Setting.showMessage("error", `${i18next.t("general:Failed to add")}: ${res.msg}`);
-        }
-      })
-      .catch(error => {
-        Setting.showMessage("error", `${i18next.t("general:Failed to connect to server")}: ${error}`);
-      });
+    this.props.history.push({pathname: `/providers/${newProvider.owner}/${newProvider.name}`, mode: "add", provider: newProvider});
   }
 
   deleteProvider(i) {
@@ -247,7 +236,7 @@ class ProviderListPage extends BaseListPage {
               <Button id="add-button" type="primary" size="small" onClick={this.addProvider.bind(this)}>{i18next.t("general:Add")}</Button>
             </div>
           )}
-          loading={this.state.loading}
+          loading={this.getTableLoading()}
           onChange={this.handleTableChange}
         />
       </div>

@@ -15,7 +15,10 @@
 package object
 
 import (
+	"errors"
 	"fmt"
+	"net/http"
+	"net/url"
 	"regexp"
 	"strings"
 
@@ -23,6 +26,7 @@ import (
 	"github.com/casdoor/casdoor/i18n"
 	"github.com/casdoor/casdoor/idp"
 	"github.com/casdoor/casdoor/idv"
+	"github.com/casdoor/casdoor/log"
 	"github.com/casdoor/casdoor/pp"
 	"github.com/casdoor/casdoor/util"
 	"github.com/xorm-io/core"
@@ -46,6 +50,7 @@ type Provider struct {
 	CustomAuthUrl     string            `xorm:"varchar(200)" json:"customAuthUrl"`
 	CustomTokenUrl    string            `xorm:"varchar(200)" json:"customTokenUrl"`
 	CustomUserInfoUrl string            `xorm:"varchar(200)" json:"customUserInfoUrl"`
+	CustomLogoutUrl   string            `xorm:"varchar(200)" json:"customLogoutUrl"`
 	CustomLogo        string            `xorm:"varchar(200)" json:"customLogo"`
 	Scopes            string            `xorm:"varchar(100)" json:"scopes"`
 	UserMapping       map[string]string `xorm:"varchar(500)" json:"userMapping"`
@@ -79,6 +84,8 @@ type Provider struct {
 	ProviderUrl string `xorm:"varchar(200)" json:"providerUrl"`
 	EnableProxy bool   `json:"enableProxy"`
 	EnablePkce  bool   `json:"enablePkce"`
+
+	State string `xorm:"varchar(100)" json:"state"`
 }
 
 func GetMaskedProvider(provider *Provider, isMaskEnabled bool) *Provider {
@@ -230,6 +237,10 @@ func UpdateProvider(id string, provider *Provider) (bool, error) {
 		}
 	}
 
+	if err := fillOpenClawProviderDefaults(provider); err != nil {
+		return false, err
+	}
+
 	if name != provider.Name {
 		err := providerChangeTrigger(owner, name, provider.Name)
 		if err != nil {
@@ -255,6 +266,10 @@ func UpdateProvider(id string, provider *Provider) (bool, error) {
 		return false, err
 	}
 
+	if affected != 0 {
+		refreshLogProviderRuntime(util.GetId(owner, name), provider)
+	}
+
 	return affected != 0, nil
 }
 
@@ -271,9 +286,17 @@ func AddProvider(provider *Provider) (bool, error) {
 		}
 	}
 
+	if err := fillOpenClawProviderDefaults(provider); err != nil {
+		return false, err
+	}
+
 	affected, err := ormer.Engine.Insert(provider)
 	if err != nil {
 		return false, err
+	}
+
+	if affected != 0 {
+		refreshLogProviderRuntime("", provider)
 	}
 
 	return affected != 0, nil
@@ -283,6 +306,10 @@ func DeleteProvider(provider *Provider) (bool, error) {
 	affected, err := ormer.Engine.ID(core.PK{provider.Owner, provider.Name}).Delete(&Provider{})
 	if err != nil {
 		return false, err
+	}
+
+	if affected != 0 {
+		stopLogProviderRuntime(provider.GetId())
 	}
 
 	return affected != 0, nil
@@ -425,7 +452,7 @@ func GetCaptchaProviderByApplication(applicationId, isCurrentProvider, lang stri
 	}
 
 	if application == nil || len(application.Providers) == 0 {
-		return nil, fmt.Errorf(i18n.Translate(lang, "provider:Invalid application id"))
+		return nil, errors.New(i18n.Translate(lang, "provider:Invalid application id"))
 	}
 	for _, provider := range application.Providers {
 		if provider.Provider == nil {
@@ -472,7 +499,7 @@ func GetFaceIdProviderByApplication(applicationId, isCurrentProvider, lang strin
 	}
 
 	if application == nil || len(application.Providers) == 0 {
-		return nil, fmt.Errorf(i18n.Translate(lang, "provider:Invalid application id"))
+		return nil, errors.New(i18n.Translate(lang, "provider:Invalid application id"))
 	}
 	for _, provider := range application.Providers {
 		if provider.Provider == nil {
@@ -513,7 +540,7 @@ func GetIdvProviderByApplication(applicationId, isCurrentProvider, lang string) 
 	}
 
 	if application == nil || len(application.Providers) == 0 {
-		return nil, fmt.Errorf(i18n.Translate(lang, "provider:Invalid application id"))
+		return nil, errors.New(i18n.Translate(lang, "provider:Invalid application id"))
 	}
 	for _, provider := range application.Providers {
 		if provider.Provider == nil {
@@ -613,4 +640,97 @@ func GetIdvProviderFromProvider(provider *Provider) idv.IdvProvider {
 		return nil
 	}
 	return idv.GetIdvProvider(provider.Type, provider.ClientId, provider.ClientSecret, provider.Endpoint)
+}
+
+func GetLogProviderFromProvider(provider *Provider) (log.LogProvider, error) {
+	if provider.Category != "Log" {
+		return nil, fmt.Errorf("provider %s category is not Log", provider.Name)
+	}
+
+	if provider.Type == "Casdoor Permission Log" {
+		return log.NewPermissionLogProvider(provider.Name, func(owner, createdTime, providerName, message string) error {
+			name := log.GenerateEntryName()
+			entry := &Entry{
+				Owner:       owner,
+				Name:        name,
+				CreatedTime: createdTime,
+				UpdatedTime: createdTime,
+				DisplayName: name,
+				Provider:    providerName,
+				Application: CasdoorApplication,
+				Message:     message,
+			}
+			_, err := AddEntry(entry)
+			return err
+		}), nil
+	}
+
+	if provider.Type == "Agent" && provider.SubType == "OpenClaw" {
+		providerName := provider.Name
+		return log.NewOpenClawProvider(providerName, func(entryType, message, clientIp, userAgent string) error {
+			// Bypass: metrics entries are temporarily not persisted to the database.
+			if entryType == "metrics" {
+				return nil
+			}
+
+			name := log.GenerateEntryName()
+			currentTime := util.GetCurrentTime()
+			entry := &Entry{
+				Owner:       CasdoorOrganization,
+				Name:        name,
+				CreatedTime: currentTime,
+				UpdatedTime: currentTime,
+				DisplayName: name,
+				Provider:    providerName,
+				Type:        entryType,
+				ClientIp:    clientIp,
+				UserAgent:   userAgent,
+				Message:     message,
+			}
+			_, err := AddEntry(entry)
+			return err
+		}), nil
+	}
+
+	return log.GetLogProvider(provider.Type, provider.Host, provider.Port, provider.Title)
+}
+
+// InvokeCustomProviderLogout iterates through the application's Custom OAuth2 providers
+// and calls their logout endpoint (if configured) to terminate the upstream session.
+func InvokeCustomProviderLogout(application *Application, accessToken string) {
+	if application == nil {
+		return
+	}
+
+	for _, providerItem := range application.Providers {
+		provider := providerItem.Provider
+		if provider == nil || provider.Category != "OAuth" || !strings.HasPrefix(provider.Type, "Custom") {
+			continue
+		}
+		if provider.CustomLogoutUrl == "" {
+			continue
+		}
+
+		go callProviderLogoutUrl(provider, accessToken)
+	}
+}
+
+// callProviderLogoutUrl sends a logout/token-revocation request to the provider's logout URL.
+// Supports RFC 7009 token revocation and Keycloak-style end_session endpoints.
+func callProviderLogoutUrl(provider *Provider, accessToken string) {
+	params := url.Values{}
+	params.Set("token", accessToken)
+	params.Set("client_id", provider.ClientId)
+	params.Set("client_secret", provider.ClientSecret)
+
+	resp, err := http.PostForm(provider.CustomLogoutUrl, params)
+	if err != nil {
+		util.LogWarning(nil, "InvokeCustomProviderLogout: failed to call logout URL %s for provider %s: %v", provider.CustomLogoutUrl, provider.Name, err)
+		return
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode >= 400 {
+		util.LogWarning(nil, "InvokeCustomProviderLogout: logout URL %s returned status %d for provider %s", provider.CustomLogoutUrl, resp.StatusCode, provider.Name)
+	}
 }

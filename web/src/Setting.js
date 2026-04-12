@@ -246,6 +246,10 @@ export const OtherProviderInfo = {
       logo: `${StaticBaseUrl}/img/social_custom.png`,
       url: "https://door.casdoor.com/",
     },
+    "Flexible Custom": {
+      logo: `${StaticBaseUrl}/img/social_custom.png`,
+      url: "https://door.casdoor.com/",
+    },
   },
   Payment: {
     "Dummy": {

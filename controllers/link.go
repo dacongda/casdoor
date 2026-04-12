@@ -78,7 +78,7 @@ func (c *ApiController) Unlink() {
 		}
 		if provider == nil {
 			if providerName != "" {
-				c.ResponseError(c.T("link:This application has no provider named") + providerName)
+				c.ResponseError(c.T("link:This application has no providers") + ": " + providerName)
 			} else {
 				c.ResponseError(c.T("link:This application has no providers of type") + providerType)
 			}

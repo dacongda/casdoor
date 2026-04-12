@@ -1378,12 +1378,12 @@ func userChangeTrigger(owner string, oldName string, newName string) error {
 			}
 
 			// u = organization/username
-			owner, name, err := util.GetOwnerAndNameFromIdWithError(u)
+			pOwner, name, err := util.GetOwnerAndNameFromIdWithError(u)
 			if err != nil {
 				return err
 			}
 			if name == oldName {
-				permission.Users[j] = util.GetId(owner, newName)
+				permission.Users[j] = util.GetId(pOwner, newName)
 			}
 		}
 		_, err = session.Where("name=?", permission.Name).And("owner=?", permission.Owner).Update(permission)

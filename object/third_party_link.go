@@ -20,10 +20,10 @@ import (
 )
 
 type ThirdPartyLink struct {
-	Owner        string `xorm:"varchar(100) notnull pk" json:"owner"`
+	Owner        string `xorm:"varchar(100) notnull pk unique(link_unique)" json:"owner"`
 	UserName     string `xorm:"varchar(100) notnull pk" json:"userName"`
-	ProviderName string `xorm:"varchar(100) notnull pk" json:"providerName"`
-	ProviderId   string `xorm:"varchar(100)" json:"providerId"`
+	ProviderName string `xorm:"varchar(100) notnull pk unique(link_unique)" json:"providerName"`
+	ProviderId   string `xorm:"varchar(100) notnull unique(link_unique)" json:"providerId"`
 	CreatedTime  string `xorm:"varchar(100)" json:"createdTime"`
 }
 

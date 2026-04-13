@@ -157,6 +157,8 @@ class ServerListPage extends BaseListPage {
         showScanModal: true,
         scanProviders: scanProviders,
         selectedScanProvider: scanProviders.length > 0 ? `${scanProviders[0].owner}/${scanProviders[0].name}` : null,
+        scanResult: null,
+        scanServers: [],
       });
     });
   };

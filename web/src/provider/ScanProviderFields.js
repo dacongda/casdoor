@@ -16,6 +16,7 @@ import React from "react";
 import {Button, Col, Row, Select, Table} from "antd";
 import * as Setting from "../Setting";
 import i18next from "i18next";
+import {scanColumns} from "../common/modal/ScanServerModal";
 
 const hostOptions = [
   {label: "127.0.0.1/32", value: "127.0.0.1/32"},
@@ -51,42 +52,6 @@ export function renderScanProviderFields(provider, updateProviderField, options 
   }
 
   const canScan = options.mode !== "add";
-  const scanColumns = [
-    {
-      title: i18next.t("general:Host"),
-      dataIndex: "host",
-      key: "host",
-      width: "140px",
-    },
-    {
-      title: i18next.t("general:Port"),
-      dataIndex: "port",
-      key: "port",
-      width: "90px",
-    },
-    {
-      title: i18next.t("general:Path"),
-      dataIndex: "path",
-      key: "path",
-      width: "120px",
-    },
-    {
-      title: i18next.t("general:URL"),
-      dataIndex: "url",
-      key: "url",
-      render: (text) => {
-        if (!text) {
-          return null;
-        }
-
-        return (
-          <a target="_blank" rel="noreferrer" href={text}>
-            {Setting.getShortText(text, 60)}
-          </a>
-        );
-      },
-    },
-  ];
 
   return (
     <React.Fragment>
@@ -151,7 +116,10 @@ export function renderScanProviderFields(provider, updateProviderField, options 
               size="middle"
               bordered
               title={() => {
-                return `Scanned hosts: ${options.scanResult?.scannedHosts ?? 0}, online hosts: ${options.scanResult?.onlineHosts?.length ?? 0}, found servers: ${(options.scanServers || []).length}`;
+                const scannedHosts = i18next.t("server:Scanned hosts") + `:${options.scanResult?.scannedHosts ?? 0}`;
+                const onlineHosts = i18next.t("server:Online hosts") + `:${options.scanResult?.onlineHosts?.length ?? 0}`;
+                const foundServers = i18next.t("server:Found servers") + `:${options.scanServers.length}`;
+                return `${scannedHosts},${onlineHosts},${foundServers}`;
               }}
             />
           </Col>

@@ -17,60 +17,61 @@ import {Button, Modal, Select, Table} from "antd";
 import i18next from "i18next";
 import * as Setting from "../../Setting";
 
-const ScanServerModal = (props) => {
-  const scanColumns = [
-    {
-      title: i18next.t("general:Host"),
-      dataIndex: "host",
-      key: "host",
-      width: "140px",
-    },
-    {
-      title: i18next.t("general:Port"),
-      dataIndex: "port",
-      key: "port",
-      width: "90px",
-    },
-    {
-      title: i18next.t("general:Path"),
-      dataIndex: "path",
-      key: "path",
-      width: "120px",
-    },
-    {
-      title: i18next.t("general:URL"),
-      dataIndex: "url",
-      key: "url",
-      render: (text) => {
-        if (!text) {
-          return null;
-        }
+export const scanColumns = [
+  {
+    title: i18next.t("general:Host"),
+    dataIndex: "host",
+    key: "host",
+    width: "140px",
+  },
+  {
+    title: i18next.t("general:Port"),
+    dataIndex: "port",
+    key: "port",
+    width: "90px",
+  },
+  {
+    title: i18next.t("general:Path"),
+    dataIndex: "path",
+    key: "path",
+    width: "120px",
+  },
+  {
+    title: i18next.t("general:URL"),
+    dataIndex: "url",
+    key: "url",
+    render: (text) => {
+      if (!text) {
+        return null;
+      }
 
-        return (
-          <a target="_blank" rel="noreferrer" href={text}>
-            {Setting.getShortText(text, 60)}
-          </a>
-        );
-      },
+      return (
+        <a target="_blank" rel="noreferrer" href={text}>
+          {Setting.getShortText(text, 60)}
+        </a>
+      );
     },
-    {
-      title: i18next.t("general:Action"),
-      dataIndex: "scanOp",
-      key: "scanOp",
-      width: "120px",
-      render: (_, record) => {
-        return (
-          <Button size="small" type="primary" onClick={() => props.onAddScannedServer(record)}>
-            {i18next.t("general:Add")}
-          </Button>
-        );
-      },
+  },
+];
+
+const ScanServerModal = (props) => {
+  const scanColumnsWithAction = [...scanColumns, {
+    title: i18next.t("general:Action"),
+    dataIndex: "scanOp",
+    key: "scanOp",
+    width: "120px",
+    render: (_, record) => {
+      return (
+        <Button size="small" type="primary" onClick={() => props.onAddScannedServer(record)}>
+          {i18next.t("general:Add")}
+        </Button>
+      );
     },
-  ];
+  }];
 
   return (
     <Modal
-      title="Scan server"
+      title={i18next.t("server:Scan server")}
       open={props.open}
       width={960}
       confirmLoading={props.loading}
@@ -93,13 +94,16 @@ const ScanServerModal = (props) => {
           style={{marginTop: "16px"}}
           scroll={{x: "max-content", y: 320}}
           dataSource={props.scanServers}
-          columns={scanColumns}
+          columns={scanColumnsWithAction}
           rowKey={(record, index) => `${record.url}-${index}`}
           pagination={false}
           size="middle"
           bordered
           title={() => {
-            return `Scanned hosts: ${props.scanResult?.scannedHosts ?? 0}, online hosts: ${props.scanResult?.onlineHosts?.length ?? 0}, found servers: ${props.scanServers.length}`;
+            const scannedHosts = i18next.t("server:Scanned hosts") + `:${props.scanResult?.scannedHosts ?? 0}`;
+            const onlineHosts = i18next.t("server:Online hosts") + `:${props.scanResult?.onlineHosts?.length ?? 0}`;
+            const foundServers = i18next.t("server:Found servers") + `:${props.scanServers.length}`;
+            return `${scannedHosts},${onlineHosts},${foundServers}`;
           }}
         />
       ) : null}

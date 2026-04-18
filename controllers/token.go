@@ -85,6 +85,11 @@ func (c *ApiController) GetToken() {
 		return
 	}
 
+	if token == nil {
+		c.ResponseError(c.T("Token not found, invalid accessToken"))
+		return
+	}
+
 	isGlobalAdmin, _ := c.isGlobalAdmin()
 	if token.Organization != organization && !isGlobalAdmin {
 		c.ResponseError(c.T("auth:Unauthorized operation"))

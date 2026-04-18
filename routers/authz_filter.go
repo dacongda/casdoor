@@ -162,6 +162,10 @@ func getObject(ctx *context.Context) (string, string, error) {
 				if organization != "" {
 					return organization, name, nil
 				}
+
+				if strings.HasSuffix(ctx.Request.URL.Path, "organization") {
+					return name, name, nil
+				}
 				return owner, name, nil
 			}
 		}
@@ -191,7 +195,7 @@ func getObject(ctx *context.Context) (string, string, error) {
 		// object owner by injecting "owner":"admin" (or any other value) into
 		// the request body while pointing the URL at a different organization's
 		// resource.
-		if id := ctx.Input.Query("id"); id != "" && !isOwnerObjPath {
+		if id := ctx.Input.Query("id"); id != "" && (!isOwnerObjPath || strings.HasSuffix(path, "update-organization")) {
 			owner, name, err := util.GetOwnerAndNameFromIdWithError(id)
 			if err == nil {
 				return owner, name, nil

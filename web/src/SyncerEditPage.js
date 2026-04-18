@@ -1212,7 +1212,7 @@ class SyncerEditPage extends React.Component {
           if (exitAfterSave) {
             this.props.history.push("/syncers");
           } else {
-            this.props.history.push(`/syncers/${this.state.organizationName}/${this.state.syncer.name}`);
+            this.props.history.push(`/syncers/${this.state.syncer.organization}/${this.state.syncer.name}`);
           }
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to save")}: ${res.msg}`);

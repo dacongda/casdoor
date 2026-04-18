@@ -115,7 +115,7 @@ class SyncerListPage extends BaseListPage {
         ...this.getColumnSearchProps("name"),
         render: (text, record, index) => {
           return (
-            <Link to={`/syncers/${text}`}>
+            <Link to={`/syncers/${record.organization}/${text}`}>
               {text}
             </Link>
           );

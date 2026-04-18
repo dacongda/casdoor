@@ -76,8 +76,10 @@ func (c *ApiController) GetSyncers() {
 // @router /get-syncer [get]
 func (c *ApiController) GetSyncer() {
 	id := c.Ctx.Input.Query("id")
+	organization := c.Ctx.Input.Query("organization")
 
-	syncer, err := object.GetMaskedSyncer(object.GetSyncer(id))
+	syncer, err := object.GetSyncerByOrganization(id, organization)
+	syncer, err = object.GetMaskedSyncer(syncer, err)
 	if err != nil {
 		c.ResponseError(err.Error())
 		return

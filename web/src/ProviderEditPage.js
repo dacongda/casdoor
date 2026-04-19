@@ -505,6 +505,10 @@ class ProviderEditPage extends React.Component {
       return ([
         {id: "OpenClaw", name: "OpenClaw"},
       ]);
+    } else if (type === "Scan") {
+      return ([
+        {id: "Site", name: "Site"},
+      ]);
     } else if (type === "MCP Scan") {
       return ([
         {id: "Intranet Scan", name: "Intranet Scan"},
@@ -694,14 +698,32 @@ class ProviderEditPage extends React.Component {
     }
 
     this.setState({scanLoading: true});
-    ServerBackend.syncIntranetServers(provider.owner, provider.name)
+    const scanApi = provider.type === "Scan"
+      ? ServerBackend.scanProvider(provider.owner, provider.name)
+      : ServerBackend.syncIntranetServers(provider.owner, provider.name);
+
+    scanApi
       .then((res) => {
         this.setState({scanLoading: false});
         if (res.status === "ok") {
-          const scanResult = res.data ?? {};
-          const scanServers = scanResult.servers ?? [];
-          this.setState({scanResult: scanResult, scanServers: scanServers});
-          Setting.showMessage("success", `${i18next.t("general:Successfully got")}: ${scanServers.length} server(s)`);
+          const scanResult = res.data ?? null;
+          const scanServers = scanResult?.servers ?? [];
+          const nextProvider = Setting.deepCopy(this.state.provider);
+          nextProvider.metadata = scanResult === null ? "" : JSON.stringify(scanResult);
+
+          this.setState({
+            provider: nextProvider,
+            scanResult: scanResult,
+            scanServers: scanServers,
+          });
+
+          if (Array.isArray(scanResult)) {
+            Setting.showMessage("success", `${i18next.t("general:Successfully got")}: ${scanResult.length} finding(s)`);
+          } else if (Array.isArray(scanServers)) {
+            Setting.showMessage("success", `${i18next.t("general:Successfully got")}: ${scanServers.length} server(s)`);
+          } else {
+            Setting.showMessage("success", i18next.t("general:Successfully saved"));
+          }
         } else {
           Setting.showMessage("error", `${i18next.t("general:Failed to get")}: ${res.msg}`);
         }
@@ -893,6 +915,8 @@ class ProviderEditPage extends React.Component {
                 if (!this.state.provider?.endpoint) {
                   this.updateProviderField("endpoint", "/,/mcp,/sse,/mcp/sse");
                 }
+              } else if (value === "Scan") {
+                this.updateProviderField("subType", "Site");
               }
               if (this.state.nameNotUserEdited) {
                 this.updateProviderField("name", getAutoProviderName(this.state.provider.category, value, ""));

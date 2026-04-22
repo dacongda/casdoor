@@ -25,18 +25,13 @@ import (
 	"sort"
 	"strconv"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/casdoor/casdoor/object"
 )
 
-var (
-	FingerprintList []Fingerprint
-	CVEList         map[string][]CVE
-	scanListsMutex  sync.RWMutex
-)
+const dataSourceUrl = "https://casdoor.ai/casdoor-data/data.json"
 
 type CVE struct {
 	Name        string   `json:"name"`
@@ -111,7 +106,15 @@ func (v VulnScanProvider) Scan(target string, command string) (string, error) {
 		return "", fmt.Errorf("scan provider sub type: %s is not supported", v.Type)
 	}
 
-	runtimeCVEList, runtimeFingerprintList := getScanListsSnapshot()
+
+	cves, fingerprints, err := getOnlineScanLists(dataSourceUrl)
+	if err != nil {
+		return "", err
+	}
+
+	runtimeCVEList := buildCVEMap(cves)
+	runtimeFingerprintList := buildFingerprintList(fingerprints)
+
 	if strings.TrimSpace(v.OnlineList) != "" {
 		onlineCVEList, onlineFingerprintList, err := getOnlineScanLists(v.OnlineList)
 		if err != nil {
@@ -203,21 +206,6 @@ func (v VulnScanProvider) Scan(target string, command string) (string, error) {
 	}
 
 	return string(resultBytes), nil
-}
-
-func setScanLists(cveMap map[string][]CVE, fingerprints []Fingerprint) {
-	scanListsMutex.Lock()
-	defer scanListsMutex.Unlock()
-
-	CVEList = cloneCVEList(cveMap)
-	FingerprintList = cloneFingerprintList(fingerprints)
-}
-
-func getScanListsSnapshot() (map[string][]CVE, []Fingerprint) {
-	scanListsMutex.RLock()
-	defer scanListsMutex.RUnlock()
-
-	return cloneCVEList(CVEList), cloneFingerprintList(FingerprintList)
 }
 
 func getOnlineScanLists(link string) ([]CVE, []Fingerprint, error) {
@@ -855,4 +843,31 @@ func mergeFinding(left VulnScanFinding, right VulnScanFinding) VulnScanFinding {
 	}
 
 	return left
+}
+
+func buildCVEMap(cves []CVE) map[string][]CVE {
+	cveMap := make(map[string][]CVE)
+	for _, cve := range cves {
+		name := strings.TrimSpace(cve.Name)
+		if name == "" {
+			continue
+		}
+
+		cveMap[name] = append(cveMap[name], cve)
+	}
+
+	return cveMap
+}
+
+func buildFingerprintList(fingerprints []Fingerprint) []Fingerprint {
+	result := make([]Fingerprint, 0, len(fingerprints))
+	for _, fingerprint := range fingerprints {
+		if strings.TrimSpace(fingerprint.Name) == "" {
+			continue
+		}
+
+		result = append(result, fingerprint)
+	}
+
+	return result
 }

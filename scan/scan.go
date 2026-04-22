@@ -106,7 +106,6 @@ func (v VulnScanProvider) Scan(target string, command string) (string, error) {
 		return "", fmt.Errorf("scan provider sub type: %s is not supported", v.Type)
 	}
 
-
 	cves, fingerprints, err := getOnlineScanLists(dataSourceUrl)
 	if err != nil {
 		return "", err

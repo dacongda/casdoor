@@ -19,6 +19,8 @@ import i18next from "i18next";
 import {scanColumns} from "../common/modal/ScanServerModal";
 import ScanTable from "../table/ScanTable";
 
+const {TextArea} = Input;
+
 const hostOptions = [
   {label: "127.0.0.1/32", value: "127.0.0.1/32"},
   {label: "10.0.0.0/24", value: "10.0.0.0/24"},
@@ -132,12 +134,32 @@ export function renderScanProviderFields(provider, updateProviderField, options 
             {i18next.t("provider:Online list")}:
           </Col>
           <Col span={22}>
-            <Input onChange={value => updateProviderField("endpoint", value)} />
+            <Input value={provider.endpoint} onChange={e => updateProviderField("endpoint", e.target.value)} />
           </Col>
         </Row>
+        {provider.subType === "Url" ? (
+          <Row style={{marginTop: "20px"}}>
+            <Col style={{marginTop: "5px"}} span={(Setting.isMobile()) ? 22 : 2}>
+              {i18next.t("general:URL")}:
+            </Col>
+            <Col span={22}>
+              <TextArea
+                autoSize={{minRows: 3, maxRows: 10}}
+                value={provider.content}
+                placeholder="https://example.com\nhttps://another.example.com"
+                onChange={e => updateProviderField("content", e.target.value)}
+              />
+            </Col>
+          </Row>
+        ) : null}
         <Row style={{marginTop: "20px"}}>
           <Col span={22} offset={(Setting.isMobile()) ? 0 : 2}>
-            <Button type="primary" loading={options.scanLoading} disabled={!canScan} onClick={options.onScan}>
+            <Button
+              type="primary"
+              loading={options.scanLoading}
+              disabled={!canScan}
+              onClick={() => options.onScan(provider.subType === "Url" ? provider.content : "")}
+            >
               {i18next.t("general:Scan")}
             </Button>
           </Col>

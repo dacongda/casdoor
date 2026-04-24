@@ -508,6 +508,7 @@ class ProviderEditPage extends React.Component {
     } else if (type === "Security Scan") {
       return ([
         {id: "Site", name: "Site"},
+        {id: "Url", name: "Url"},
       ]);
     } else if (type === "MCP Scan") {
       return ([
@@ -690,16 +691,19 @@ class ProviderEditPage extends React.Component {
     }
   }
 
-  submitProviderScan() {
+  submitProviderScan(target = "") {
     const provider = this.state.provider;
     if (!provider?.owner || !provider?.name) {
       Setting.showMessage("error", i18next.t("provider:Provider owner and name are required"));
       return;
     }
 
+    const isSecurityUrlScan = provider.type === "Security Scan" && provider.subType === "Url";
+    const rawTarget = isSecurityUrlScan ? (target || provider.content || "") : target;
+
     this.setState({scanLoading: true});
     const scanApi = provider.type === "Security Scan"
-      ? ServerBackend.scanProvider(provider.owner, provider.name)
+      ? ServerBackend.scanProvider(provider.owner, provider.name, rawTarget)
       : ServerBackend.syncIntranetServers(provider.owner, provider.name);
 
     scanApi

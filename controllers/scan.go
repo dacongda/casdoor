@@ -61,6 +61,11 @@ func (c *ApiController) Scan() {
 		return
 	}
 
+	if strings.EqualFold(configuredProvider.SubType, "Url") && target == "" && strings.TrimSpace(configuredProvider.Content) == "" {
+		c.ResponseError("target URL is required for Url scan")
+		return
+	}
+
 	scanProvider, err := scan.GetScanProviderFromProvider(configuredProvider)
 	if err != nil {
 		c.ResponseError(err.Error())

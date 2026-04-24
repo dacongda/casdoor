@@ -1,28 +1,12 @@
-// Copyright 2026 The Casdoor Authors. All Rights Reserved.
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//      http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
-
 package scan
 
 import (
-	"crypto/tls"
 	"encoding/json"
 	"fmt"
 	"io"
 	"net/http"
 	"net/url"
 	"regexp"
-	"sort"
 	"strconv"
 	"strings"
 	"time"
@@ -30,305 +14,6 @@ import (
 	"github.com/beego/beego/v2/core/logs"
 	"github.com/casdoor/casdoor/object"
 )
-
-const dataSourceUrl = "https://casdoor.ai/casdoor-data/data.json"
-
-type CVE struct {
-	Name        string   `json:"name"`
-	Code        string   `json:"code"`
-	Summary     string   `json:"summary"`
-	Description string   `json:"description"`
-	Severity    string   `json:"severity"`
-	Suggestion  string   `json:"suggestion"`
-	Rule        string   `json:"rule"`
-	References  []string `json:"references"`
-}
-
-type FingerprintHttpInfo struct {
-	Method   string               `json:"method"`
-	Path     string               `json:"path"`
-	Matchers []FingerprintMatcher `json:"matchers"`
-}
-
-type FingerprintMatcher struct {
-	Pos   string `json:"pos"`
-	Value string `json:"value"`
-}
-
-type FingerprintVersionInfo struct {
-	Method string `json:"method"`
-	Path   string `json:"path"`
-	Part   string `json:"part"`
-	Regex  string `json:"regex"`
-}
-
-type Fingerprint struct {
-	Name        string `json:"name"`
-	Description string `json:"description"`
-	Severity    string `json:"severity"`
-	Product     string `json:"product"`
-	Vendor      string `json:"vendor"`
-
-	HttpInfo    FingerprintHttpInfo    `json:"httpInfo"`
-	VersionInfo FingerprintVersionInfo `json:"versionInfo"`
-}
-
-type VulnScanProvider struct {
-	Type  string `json:"type"`
-	Owner string `json:"owner"`
-
-	OnlineList string `json:"onlineList"`
-}
-
-type VulnScanFinding struct {
-	Name      string `json:"name"`
-	Product   string `json:"product"`
-	Vendor    string `json:"vendor"`
-	Version   string `json:"version"`
-	Severity  string `json:"severity"`
-	TargetURL string `json:"targetUrl"`
-	CVEs      []CVE  `json:"cves"`
-}
-
-type onlineScanLists struct {
-	CVEList         []CVE         `json:"cveList"`
-	FingerprintList []Fingerprint `json:"fingerprintList"`
-}
-
-func NewScanProviderFromProvider(provider *object.Provider) VulnScanProvider {
-	return VulnScanProvider{Type: provider.SubType, Owner: provider.Owner, OnlineList: provider.Endpoint}
-}
-
-func (v VulnScanProvider) Scan(target string, command string) (string, error) {
-	_ = command
-
-	if !strings.EqualFold(v.Type, "Site") {
-		return "", fmt.Errorf("scan provider sub type: %s is not supported", v.Type)
-	}
-
-	cves, fingerprints, err := getOnlineScanLists(dataSourceUrl)
-	if err != nil {
-		return "", err
-	}
-
-	runtimeCVEList := buildCVEMap(cves)
-	runtimeFingerprintList := buildFingerprintList(fingerprints)
-
-	if strings.TrimSpace(v.OnlineList) != "" {
-		onlineCVEList, onlineFingerprintList, err := getOnlineScanLists(v.OnlineList)
-		if err != nil {
-			logs.Warning("scan: failed to load online scan lists, onlineList = %s, err = %v", v.OnlineList, err)
-		} else {
-			mergeOnlineCVEs(runtimeCVEList, onlineCVEList)
-			runtimeFingerprintList = mergeOnlineFingerprints(runtimeFingerprintList, onlineFingerprintList)
-		}
-	}
-
-	sites, err := object.GetSites(v.Owner)
-	if err != nil {
-		return "", err
-	}
-
-	client := &http.Client{
-		Timeout: 5 * time.Second,
-		Transport: &http.Transport{
-			TLSClientConfig: &tls.Config{InsecureSkipVerify: true}, //nolint:gosec
-		},
-		CheckRedirect: func(_ *http.Request, _ []*http.Request) error {
-			return http.ErrUseLastResponse
-		},
-	}
-
-	findings := make([]VulnScanFinding, 0)
-	findingMap := map[string]int{}
-
-	for _, site := range sites {
-		if site == nil {
-			continue
-		}
-
-		baseURLs := getSiteBaseURLs(site)
-		for _, baseURL := range baseURLs {
-			if strings.TrimSpace(target) != "" && !strings.Contains(baseURL, strings.TrimSpace(target)) {
-				continue
-			}
-
-			for _, fingerprint := range runtimeFingerprintList {
-				matched, err := isFingerprintMatched(client, baseURL, fingerprint)
-				if err != nil {
-					logs.Warning("scan: fingerprint probe failed, site = %s, fingerprint = %s, err = %v", site.Name, fingerprint.Name, err)
-					continue
-				}
-
-				if !matched {
-					continue
-				}
-
-				version, err := getFingerprintVersion(client, baseURL, fingerprint)
-				if err != nil {
-					logs.Warning("scan: version probe failed, site = %s, fingerprint = %s, err = %v", site.Name, fingerprint.Name, err)
-				}
-
-				cves := filterMatchedCVEs(runtimeCVEList[fingerprint.Name], version)
-				finding := VulnScanFinding{
-					Name:      site.Name,
-					Product:   fingerprint.Product,
-					Vendor:    fingerprint.Vendor,
-					Version:   version,
-					Severity:  fingerprint.Severity,
-					TargetURL: baseURL,
-					CVEs:      cves,
-				}
-
-				findingKey := fmt.Sprintf("%s|%s", finding.Name, finding.TargetURL)
-				if idx, ok := findingMap[findingKey]; ok {
-					findings[idx] = mergeFinding(findings[idx], finding)
-					continue
-				}
-
-				findingMap[findingKey] = len(findings)
-				findings = append(findings, finding)
-			}
-		}
-	}
-
-	sort.Slice(findings, func(i, j int) bool {
-		if findings[i].TargetURL == findings[j].TargetURL {
-			return findings[i].Name < findings[j].Name
-		}
-		return findings[i].TargetURL < findings[j].TargetURL
-	})
-
-	resultBytes, err := json.Marshal(findings)
-	if err != nil {
-		return "", err
-	}
-
-	return string(resultBytes), nil
-}
-
-func getOnlineScanLists(link string) ([]CVE, []Fingerprint, error) {
-	request, err := http.NewRequest(http.MethodGet, strings.TrimSpace(link), nil)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	client := &http.Client{Timeout: 10 * time.Second}
-	response, err := client.Do(request)
-	if err != nil {
-		return nil, nil, err
-	}
-	defer response.Body.Close()
-
-	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
-		return nil, nil, fmt.Errorf("unexpected status code: %d", response.StatusCode)
-	}
-
-	body, err := io.ReadAll(io.LimitReader(response.Body, 8*1024*1024))
-	if err != nil {
-		return nil, nil, err
-	}
-
-	res := onlineScanLists{}
-	err = json.Unmarshal(body, &res)
-	if err != nil {
-		return nil, nil, err
-	}
-
-	return res.CVEList, res.FingerprintList, nil
-}
-
-func cloneCVEList(source map[string][]CVE) map[string][]CVE {
-	res := map[string][]CVE{}
-	for key, cves := range source {
-		res[key] = append([]CVE{}, cves...)
-	}
-	return res
-}
-
-func cloneFingerprintList(source []Fingerprint) []Fingerprint {
-	return append([]Fingerprint{}, source...)
-}
-
-func mergeOnlineCVEs(target map[string][]CVE, online []CVE) {
-	for _, cve := range online {
-		name := strings.TrimSpace(cve.Name)
-		if name == "" {
-			continue
-		}
-
-		seen := map[string]struct{}{}
-		for _, existingCve := range target[name] {
-			if existingCve.Code == "" {
-				continue
-			}
-			seen[existingCve.Code] = struct{}{}
-		}
-
-		if cve.Code != "" {
-			if _, ok := seen[cve.Code]; ok {
-				continue
-			}
-		}
-
-		target[name] = append(target[name], cve)
-	}
-}
-
-func mergeOnlineFingerprints(base []Fingerprint, online []Fingerprint) []Fingerprint {
-	seen := map[string]struct{}{}
-	for _, fingerprint := range base {
-		name := strings.TrimSpace(fingerprint.Name)
-		if name == "" {
-			continue
-		}
-		seen[name] = struct{}{}
-	}
-
-	for _, fingerprint := range online {
-		name := strings.TrimSpace(fingerprint.Name)
-		if name == "" {
-			continue
-		}
-		if _, ok := seen[name]; ok {
-			continue
-		}
-		seen[name] = struct{}{}
-		base = append(base, fingerprint)
-	}
-
-	return base
-}
-
-func (v VulnScanProvider) ParseResult(rawResult string) (string, error) {
-	var findings []VulnScanFinding
-	if err := json.Unmarshal([]byte(rawResult), &findings); err != nil {
-		return "", err
-	}
-
-	resultBytes, err := json.Marshal(findings)
-	if err != nil {
-		return "", err
-	}
-
-	return string(resultBytes), nil
-}
-
-func (v VulnScanProvider) GetResultSummary(result string) string {
-	var findings []VulnScanFinding
-	if err := json.Unmarshal([]byte(result), &findings); err != nil {
-		return fmt.Sprintf("invalid result: %v", err)
-	}
-
-	targetSet := map[string]struct{}{}
-	cveCount := 0
-	for _, finding := range findings {
-		targetSet[finding.TargetURL] = struct{}{}
-		cveCount += len(finding.CVEs)
-	}
-
-	return fmt.Sprintf("targets=%d findings=%d cves=%d", len(targetSet), len(findings), cveCount)
-}
 
 func getSiteBaseURLs(site *object.Site) []string {
 	res := []string{}
@@ -392,6 +77,128 @@ func getSiteBaseURLs(site *object.Site) []string {
 	return res
 }
 
+func splitScanTargets(raw string) []string {
+	parts := strings.Split(strings.ReplaceAll(raw, "\r\n", "\n"), "\n")
+	res := make([]string, 0, len(parts))
+	for _, part := range parts {
+		if strings.TrimSpace(part) == "" {
+			continue
+		}
+		res = append(res, part)
+	}
+	return res
+}
+
+func normalizeScanBaseURL(rawURL string) (string, string, error) {
+	candidate := strings.TrimSpace(rawURL)
+	if candidate == "" {
+		return "", "", fmt.Errorf("target URL is empty")
+	}
+
+	lower := strings.ToLower(candidate)
+	if !strings.HasPrefix(lower, "http://") && !strings.HasPrefix(lower, "https://") {
+		candidate = fmt.Sprintf("https://%s", candidate)
+	}
+
+	u, err := url.Parse(candidate)
+	if err != nil {
+		return "", "", err
+	}
+
+	scheme := strings.ToLower(strings.TrimSpace(u.Scheme))
+	if scheme != "http" && scheme != "https" {
+		return "", "", fmt.Errorf("unsupported URL scheme: %s", u.Scheme)
+	}
+
+	if strings.TrimSpace(u.Host) == "" {
+		return "", "", fmt.Errorf("invalid target URL: host is empty")
+	}
+
+	baseURL := fmt.Sprintf("%s://%s", scheme, u.Host)
+	return rawURL, baseURL, nil
+}
+
+func getOnlineScanLists(link string) ([]CVE, []Fingerprint, error) {
+	request, err := http.NewRequest(http.MethodGet, strings.TrimSpace(link), nil)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	client := &http.Client{Timeout: 10 * time.Second}
+	response, err := client.Do(request)
+	if err != nil {
+		return nil, nil, err
+	}
+	defer response.Body.Close()
+
+	if response.StatusCode < http.StatusOK || response.StatusCode >= http.StatusMultipleChoices {
+		return nil, nil, fmt.Errorf("unexpected status code: %d", response.StatusCode)
+	}
+
+	body, err := io.ReadAll(io.LimitReader(response.Body, 8*1024*1024))
+	if err != nil {
+		return nil, nil, err
+	}
+
+	res := onlineScanLists{}
+	err = json.Unmarshal(body, &res)
+	if err != nil {
+		return nil, nil, err
+	}
+
+	return res.CVEList, res.FingerprintList, nil
+}
+
+func mergeOnlineCVEs(target map[string][]CVE, online []CVE) {
+	for _, cve := range online {
+		name := strings.TrimSpace(cve.Name)
+		if name == "" {
+			continue
+		}
+
+		seen := map[string]struct{}{}
+		for _, existingCve := range target[name] {
+			if existingCve.Code == "" {
+				continue
+			}
+			seen[existingCve.Code] = struct{}{}
+		}
+
+		if cve.Code != "" {
+			if _, ok := seen[cve.Code]; ok {
+				continue
+			}
+		}
+
+		target[name] = append(target[name], cve)
+	}
+}
+
+func mergeOnlineFingerprints(base []Fingerprint, online []Fingerprint) []Fingerprint {
+	seen := map[string]struct{}{}
+	for _, fingerprint := range base {
+		name := strings.TrimSpace(fingerprint.Name)
+		if name == "" {
+			continue
+		}
+		seen[name] = struct{}{}
+	}
+
+	for _, fingerprint := range online {
+		name := strings.TrimSpace(fingerprint.Name)
+		if name == "" {
+			continue
+		}
+		if _, ok := seen[name]; ok {
+			continue
+		}
+		seen[name] = struct{}{}
+		base = append(base, fingerprint)
+	}
+
+	return base
+}
+
 func isFingerprintMatched(client *http.Client, baseURL string, fingerprint Fingerprint) (bool, error) {
 	method := strings.TrimSpace(fingerprint.HttpInfo.Method)
 	if method == "" {
@@ -425,7 +232,6 @@ func isMatcherMatched(client *http.Client, baseURL string, matcher FingerprintMa
 	case "header", "headers":
 		return strings.Contains(strings.ToLower(headersText), strings.ToLower(value))
 	case "icon":
-		// Keep a lightweight fallback for icon-based signatures until dedicated icon hashing is added.
 		statusCode, _, iconBody, err := doRequest(client, http.MethodGet, baseURL, "/favicon.ico")
 		if err != nil {
 			return false
@@ -820,7 +626,7 @@ func compareVersionToken(left versionToken, right versionToken) int {
 	return 0
 }
 
-func mergeFinding(left VulnScanFinding, right VulnScanFinding) VulnScanFinding {
+func mergeFinding(left SecurityScanFinding, right SecurityScanFinding) SecurityScanFinding {
 	if left.Version == "" {
 		left.Version = right.Version
 	}
@@ -841,7 +647,23 @@ func mergeFinding(left VulnScanFinding, right VulnScanFinding) VulnScanFinding {
 		left.CVEs = append(left.CVEs, cve)
 	}
 
-	return left
+	return normalizeUnknownFinding(left)
+}
+
+func normalizeUnknownFinding(finding SecurityScanFinding) SecurityScanFinding {
+	if strings.TrimSpace(finding.Product) == "" {
+		finding.Product = "Unknown"
+	}
+	if strings.TrimSpace(finding.Vendor) == "" {
+		finding.Vendor = "Unknown"
+	}
+	if strings.TrimSpace(finding.Version) == "" {
+		finding.Version = "Unknown"
+	}
+	if strings.TrimSpace(finding.Severity) == "" {
+		finding.Severity = "Unknown"
+	}
+	return finding
 }
 
 func buildCVEMap(cves []CVE) map[string][]CVE {

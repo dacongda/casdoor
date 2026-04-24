@@ -26,7 +26,7 @@ import (
 // Scan
 // @Title Scan
 // @Tag Scan API
-// @Description run scan provider (type=Scan), persist result to provider metadata, and return parsed result
+// @Description run scan provider (type=Security Scan), persist result to provider metadata, and return parsed result
 // @Param   owner   query  string  true  "The provider owner"
 // @Param   name    query  string  true  "The provider name"
 // @Param   target  query  string  false "Optional scan target"
@@ -56,8 +56,8 @@ func (c *ApiController) Scan() {
 		return
 	}
 
-	if configuredProvider.Category != "Scan" || configuredProvider.Type != "Scan" {
-		c.ResponseError("provider type Scan is required")
+	if configuredProvider.Category != "Scan" || configuredProvider.Type != "Security Scan" {
+		c.ResponseError("provider type Security Scan is required")
 		return
 	}
 

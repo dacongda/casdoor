@@ -505,7 +505,7 @@ class ProviderEditPage extends React.Component {
       return ([
         {id: "OpenClaw", name: "OpenClaw"},
       ]);
-    } else if (type === "Scan") {
+    } else if (type === "Security Scan") {
       return ([
         {id: "Site", name: "Site"},
       ]);
@@ -698,7 +698,7 @@ class ProviderEditPage extends React.Component {
     }
 
     this.setState({scanLoading: true});
-    const scanApi = provider.type === "Scan"
+    const scanApi = provider.type === "Security Scan"
       ? ServerBackend.scanProvider(provider.owner, provider.name)
       : ServerBackend.syncIntranetServers(provider.owner, provider.name);
 
@@ -915,7 +915,7 @@ class ProviderEditPage extends React.Component {
                 if (!this.state.provider?.endpoint) {
                   this.updateProviderField("endpoint", "/,/mcp,/sse,/mcp/sse");
                 }
-              } else if (value === "Scan") {
+              } else if (value === "Security Scan") {
                 this.updateProviderField("subType", "Site");
               }
               if (this.state.nameNotUserEdited) {

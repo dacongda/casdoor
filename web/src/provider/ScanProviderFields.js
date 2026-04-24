@@ -124,7 +124,7 @@ export function renderScanProviderFields(provider, updateProviderField, options 
         ) : null}
       </React.Fragment>
     );
-  } else if (provider.type === "Scan") {
+  } else if (provider.type === "Security Scan") {
     return (
       <React.Fragment>
         <Row style={{marginTop: "20px"}}>

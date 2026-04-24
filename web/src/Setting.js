@@ -478,7 +478,7 @@ export const OtherProviderInfo = {
     },
   },
   Scan: {
-    "Scan": {
+    "Security Scan": {
       logo: `${StaticBaseUrl}/img/social_default.png`,
       url: "",
     },
@@ -1462,7 +1462,7 @@ export function getProviderTypeOptions(category) {
     ]);
   } else if (category === "Scan") {
     return ([
-      {id: "Scan", name: "Scan"},
+      {id: "Security Scan", name: "Security Scan"},
       {id: "MCP Scan", name: "MCP Scan"},
     ]);
   } else {

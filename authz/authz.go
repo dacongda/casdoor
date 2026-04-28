@@ -257,7 +257,7 @@ func isAllowedInDemoMode(subOwner string, subName string, method string, urlPath
 			}
 			return false
 		} else if urlPath == "/api/upload-resource" || urlPath == "/api/add-transaction" {
-			if subOwner == "app" && subName == "app-casibase" {
+			if subOwner == "app" && (subName == "app-casibase" || strings.HasSuffix(subName, "/app-casibase")) {
 				return true
 			}
 			return false

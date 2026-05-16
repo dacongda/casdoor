@@ -14,7 +14,7 @@
 
 import React from "react";
 import {DeleteOutlined, DownOutlined, UpOutlined} from "@ant-design/icons";
-import {AutoComplete, Button, Col, Input, Row, Table, Tooltip} from "antd";
+import {AutoComplete, Button, Col, Row, Table, Tooltip} from "antd";
 import * as Setting from "../Setting";
 import i18next from "i18next";
 
@@ -33,6 +33,18 @@ class CustomScopeTable extends React.Component {
     this.state = {
       classes: props,
     };
+    this.rowKeyMap = new WeakMap();
+    this.rowKeyCounter = 0;
+  }
+
+  getRowKey(row, index) {
+    if (!row || typeof row !== "object") {
+      return `scope_${index}`;
+    }
+    if (!this.rowKeyMap.has(row)) {
+      this.rowKeyMap.set(row, `scope_${this.rowKeyCounter++}`);
+    }
+    return this.rowKeyMap.get(row);
   }
 
   normalizeScope(scope) {
@@ -109,6 +121,7 @@ class CustomScopeTable extends React.Component {
           return (
             <AutoComplete
               status={this.isScopeMissing(record) ? "error" : ""}
+              style={{width: "100%"}}
               value={text}
               options={autoCompleteOptions}
               placeholder="Select or input scope"
@@ -123,9 +136,7 @@ class CustomScopeTable extends React.Component {
               onChange={(value) => {
                 this.updateField(table, index, "scope", value);
               }}
-            >
-              <Input />
-            </AutoComplete>
+            />
           );
         },
       },
@@ -185,7 +196,7 @@ class CustomScopeTable extends React.Component {
           <Button type="primary" size="small" onClick={() => this.addRow(table)}>{i18next.t("general:Add")}</Button>
         </div>
       )}
-      columns={columns} dataSource={table} rowKey={(record, index) => record.scope?.trim() || `temp_${index}`} size="middle" bordered pagination={false}
+      columns={columns} dataSource={table} rowKey={(record, index) => this.getRowKey(record, index)} size="middle" bordered pagination={false}
       />
     );
   }
